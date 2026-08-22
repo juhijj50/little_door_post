@@ -410,7 +410,7 @@ export default function TheLittleDoorPost({
               </div>
       
               <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
-                <div ref={statusBox} style={css("display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);margin-bottom:var(--space-4)")}>
+                <div style={css("display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);margin-bottom:var(--space-4)")}>
                   <span style={css("width:7px;height:7px;border-radius:50%;background:var(--color-accent);flex:none")}></span>
                   <span ref={statusText} style={css("font-size:13px;line-height:1.4")}>Sign-ups open the 20th of every month.</span>
                 </div>
