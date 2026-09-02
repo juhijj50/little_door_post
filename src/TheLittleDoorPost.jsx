@@ -1,28 +1,17 @@
-/*  The Little Door Post — one-page React component.
+/*  The Little Door Post — the landing page.
  *  Needs styles.css (the Classical design-system stylesheet) imported once — see main.jsx —
  *  and the four illustrations served from /assets/ (they live in public/assets here).
+ *
+ *  The sign-up flow lives in SubscribeForm.jsx; this file owns the envelope
+ *  illustration beside it and keeps it addressed as the reader types.
  *
  *  Props
  *    envelopeColor  hex — the envelope's paper colour            (default "#5e7150")
  *    signupWindow   "Automatic" | "Open now" | "Closed"          (default "Automatic")
- *    addressDetail  "Full postal address" | "Name, email & phone"
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
-
-/* inline CSS text -> React style object (keeps the markup readable) */
-const css = (text) =>
-  Object.fromEntries(
-    text
-      .split(";")
-      .map((d) => d.trim())
-      .filter(Boolean)
-      .map((d) => {
-        const i = d.indexOf(":");
-        const k = d.slice(0, i).trim();
-        const v = d.slice(i + 1).trim();
-        return [k.startsWith("--") ? k : k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v];
-      })
-  );
+import React, { useCallback, useEffect, useRef } from "react";
+import { css } from "./css.js";
+import SubscribeForm from "./SubscribeForm.jsx";
 
 const STYLE = `html { scroll-behavior: smooth; }
   body { margin: 0; overflow-x: hidden; }
@@ -51,6 +40,36 @@ const STYLE = `html { scroll-behavior: smooth; }
   [data-hv="0"]:hover { background:var(--color-accent-100) }`;
 
 const FALLBACKS = ["Your name", "Street address", "City \u00b7 Postcode", "Country"];
+
+/* Exactly what is in the envelope. Six printed pieces, the same six every
+ * month \u2014 only the artwork and the writing change. Keep this list and the
+ * backend's ENVELOPE_CONTENTS saying the same thing. */
+const ENVELOPE = [
+  {
+    title: "A letter from Iris",
+    detail: "Two printed pages about the place she has wandered into this month.",
+  },
+  {
+    title: "A letter from a side character",
+    detail: "One printed page from somebody she met there, in their own words.",
+  },
+  {
+    title: "A theme sticker",
+    detail: "A die-cut vinyl sticker of that month\u2019s world.",
+  },
+  {
+    title: "A character sticker",
+    detail: "A die-cut vinyl sticker of Iris or one of the folk she meets.",
+  },
+  {
+    title: "An art print",
+    detail: "A small illustrated print on card, drawn for that month\u2019s story.",
+  },
+  {
+    title: "An activity or fact sheet",
+    detail: "One printed page \u2014 a puzzle, a recipe, or a page of true facts about the place.",
+  },
+];
 
 const shade = (hex, amt) => {
   const h = String(hex).replace("#", "");
@@ -85,11 +104,7 @@ function windowState(mode) {
 export default function TheLittleDoorPost({
   envelopeColor = "#5e7150",
   signupWindow = "Automatic",
-  addressDetail = "Full postal address",
 }) {
-  const [sealed, setSealed] = useState(false);
-  const [error, setError] = useState("");
-
   const rootRef = useRef(null);
   const headerRef = useRef(null);
   const envWrap = useRef(null);
@@ -100,8 +115,6 @@ export default function TheLittleDoorPost({
   const outCountry = useRef(null);
   const statusTop = useRef(null);
   const statusText = useRef(null);
-
-  const showAddress = addressDetail === "Full postal address";
 
   /* envelope colour */
   useEffect(() => {
@@ -118,7 +131,7 @@ export default function TheLittleDoorPost({
     const w = windowState(signupWindow);
     if (statusText.current) statusText.current.textContent = w.text;
     if (statusTop.current) statusTop.current.textContent = w.open ? "Sign-ups are open now" : "Sign-ups open the 20th of every month";
-  }, [signupWindow, sealed]);
+  }, [signupWindow]);
 
   /* sticky header shadow + decorations off on small screens */
   useEffect(() => {
@@ -142,58 +155,31 @@ export default function TheLittleDoorPost({
     };
   }, []);
 
-  /* live-addressed envelope */
-  const onFormInput = useCallback((e) => {
-    const f = e.target.form || e.currentTarget;
-    if (!f) return;
-    const get = (n) => (f.elements[n] && f.elements[n].value.trim()) || "";
-    const set = (ref, v, fb) => { if (ref.current) ref.current.textContent = v || fb; };
-    set(outName, get("name"), FALLBACKS[0]);
-    set(outStreet, get("street"), FALLBACKS[1]);
-    set(outCity, [get("city"), get("postcode")].filter(Boolean).join(" \u00b7 "), FALLBACKS[2]);
-    set(outCountry, get("country"), FALLBACKS[3]);
+  /* The envelope is addressed straight through the DOM rather than through
+   * state \u2014 it repaints on every keystroke, and React does not need to know. */
+  const onAddressChange = useCallback((a) => {
+    const set = (ref, v, fb) => { if (ref.current) ref.current.textContent = (v || "").trim() || fb; };
+    set(outName, a.name, FALLBACKS[0]);
+    set(outStreet, a.street, FALLBACKS[1]);
+    set(outCity, a.cityLine, FALLBACKS[2]);
+    set(outCountry, a.country, FALLBACKS[3]);
   }, []);
 
-  const onSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-      const f = e.target;
-      const get = (n) => (f.elements[n] && f.elements[n].value.trim()) || "";
-      const missing = [];
-      if (!get("name")) missing.push("your name");
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(get("email"))) missing.push("a working email");
-      if (!get("phone")) missing.push("a phone number");
-      if (showAddress) {
-        if (!get("street")) missing.push("a street address");
-        if (!get("city")) missing.push("a city");
-        if (!get("country")) missing.push("a country");
-      }
-      if (missing.length) {
-        setError("Iris still needs " + missing.slice(0, -1).join(", ") + (missing.length > 1 ? " and " : "") + missing[missing.length - 1] + ".");
-        return;
-      }
-      const seal = sealRef.current;
-      if (seal) {
-        seal.style.animation = "none";
-        void seal.offsetWidth;
-        seal.style.animation = "ldp-seal .8s cubic-bezier(.2,1.4,.4,1) both";
-      }
-      if (envWrap.current) envWrap.current.style.transform = "translateY(-10px) rotate(-1.5deg)";
-      setError("");
-      setSealed(true);
-    },
-    [showAddress]
-  );
+  const onSealed = useCallback(() => {
+    const seal = sealRef.current;
+    if (seal) {
+      seal.style.animation = "none";
+      void seal.offsetWidth; /* forces the restart */
+      seal.style.animation = "ldp-seal .8s cubic-bezier(.2,1.4,.4,1) both";
+    }
+    if (envWrap.current) envWrap.current.style.transform = "translateY(-10px) rotate(-1.5deg)";
+  }, []);
 
-  const onReset = useCallback(() => {
+  const onUnsealed = useCallback(() => {
     if (sealRef.current) { sealRef.current.style.animation = "none"; sealRef.current.style.opacity = "0"; }
     if (envWrap.current) envWrap.current.style.transform = "none";
     [outName, outStreet, outCity, outCountry].forEach((r, i) => { if (r.current) r.current.textContent = FALLBACKS[i]; });
-    setError("");
-    setSealed(false);
   }, []);
-
-  const notSealed = !sealed;
 
   return (
     <>
@@ -206,7 +192,8 @@ export default function TheLittleDoorPost({
           <a href="#top" style={css("font-family:var(--font-heading);font-size:clamp(15px,3.4vw,19px);letter-spacing:.02em;margin-right:auto;text-decoration:none;color:var(--color-text);white-space:nowrap")}>The Little Door Post</a>
           <a data-navlink="1" href="#meet" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>Meet Iris</a>
           <a data-navlink="1" href="#how" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>How it works</a>
-          <a data-navlink="1" href="#inside" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>What's inside</a>
+          <a data-navlink="1" href="#inside" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>What you get</a>
+          <a data-navlink="1" href="#/the-red-race" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>The letters</a>
           <a className="btn btn-primary" href="#subscribe" style={css("white-space:nowrap")}>Receive a letter</a>
         </header>
       
@@ -229,11 +216,11 @@ export default function TheLittleDoorPost({
           <div ref={statusTop} style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups open the 20th of every month</div>
       
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
-            <span>Posted worldwide</span>
+            <span>Posted across India</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>One envelope a month</span>
+            <span>Six printed pieces</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>Arrives in 1–2 weeks</span>
+            <span>Arrives in 5–10 working days</span>
           </div>
       
           <div style={css("position:absolute;left:50%;bottom:clamp(18px,3vh,34px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px")}>
@@ -266,6 +253,11 @@ export default function TheLittleDoorPost({
                 <p style={css("text-align:justify;hyphens:auto;font-size:clamp(15px,1.7vw,17px);line-height:1.85;text-wrap:pretty")}>Some places are strange. Some are soft. Some hum with music at midnight. Some smell of buttered toast.</p>
                 <div style={css("height:1px;background:color-mix(in srgb, #f4f2ec 28%, transparent);margin:var(--space-4) 0")}></div>
                 <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(21px,3.4vw,29px);line-height:1.4;margin:0;color:#f0c579")}>Every month, Iris finds a new door.<br />Every month, she sends a letter home.</p>
+
+                <a href="#/the-red-race" style={css("display:inline-flex;align-items:center;gap:10px;margin-top:var(--space-4);padding:11px 18px;border:1px solid color-mix(in srgb, #f4f2ec 42%, transparent);border-radius:var(--radius-md);font-family:var(--font-heading);font-size:15px;text-decoration:none;color:#f4f2ec;white-space:nowrap")}>
+                  <span style={css("width:7px;height:7px;border-radius:50%;background:#b3312f;flex:none")}></span>
+                  Read her first letter — <em style={css("font-style:italic;color:#f0c579")}>The Red Race</em>
+                </a>
               </div>
               <div style={css("display:flex;justify-content:center;animation-name:ldp-parallax;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:view();animation-range:cover 0% cover 100%")}>
                 <img src="/assets/iris-desk.png" alt="Iris at her writing desk, letters and a sleeping cat beside her" style={css("width:min(440px,88vw);filter:drop-shadow(0 22px 38px rgba(20,26,16,.38))")} />
@@ -304,7 +296,7 @@ export default function TheLittleDoorPost({
               </div>
               <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>5</div>
               <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Your envelope arrives 1–2 weeks later, depending on where you are</p>
+                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Your envelope arrives in 5–10 working days</p>
               </div>
               </div>
             </div>
@@ -318,39 +310,33 @@ export default function TheLittleDoorPost({
           <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
           <div style={css("position:relative;width:min(1080px,100%);margin:0 auto")}>
             <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 8% cover 26%")}>
-              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>What's</div>
-              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>Inside?</div>
+              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>What's in</div>
+              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>The envelope</div>
+              <p style={css("max-width:46ch;margin:clamp(20px,3.4vh,30px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Six printed pieces, the same six every month — only the writing and the artwork change. No mystery items, nothing edible, nothing you have not been shown.</p>
               <div style={css("width:56px;height:1px;background:#5e7150;margin:clamp(24px,4vh,38px) auto 0")}></div>
             </div>
-      
+
             <div style={css("position:relative;max-width:660px;margin:clamp(38px,6.5vh,66px) auto 0;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 6% cover 28%")}>
               <div style={css("position:absolute;top:-14px;left:50%;transform:translateX(-50%) rotate(-1.6deg);width:clamp(100px,24%,144px);height:30px;background:color-mix(in srgb, var(--color-accent-300) 60%, transparent);border-left:1px solid color-mix(in srgb, var(--color-accent-500) 28%, transparent);border-right:1px solid color-mix(in srgb, var(--color-accent-500) 28%, transparent);box-shadow:var(--shadow-sm);z-index:2")}></div>
               <div style={css("position:relative;padding:clamp(28px,4.5vw,44px) clamp(18px,3.4vw,34px);background-color:var(--color-neutral-100);background-image:repeating-linear-gradient(to bottom, transparent 0 33px, color-mix(in srgb, var(--color-accent) 15%, transparent) 33px 34px);border:1px solid var(--color-divider);border-radius:var(--radius-md);box-shadow:var(--shadow-md);transform:rotate(-.4deg)")}>
                 <div style={css("display:flex;flex-direction:column;gap:clamp(10px,1.6vw,14px)")}>
-                  <div style={css("display:flex;align-items:center;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 32%")} data-hv="0">
-                    <span style={css("flex:none;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
-                    <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>A letter from Iris about the town she’s wandered into</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 16% cover 36%")} data-hv="0">
-                    <span style={css("flex:none;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
-                    <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>A postcard with artwork from that month’s world</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 20% cover 40%")} data-hv="0">
-                    <span style={css("flex:none;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
-                    <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>A small souvenir — a little piece of the town to keep</span>
-                  </div>
-                  <div style={css("display:flex;align-items:center;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 24% cover 44%")} data-hv="0">
-                    <span style={css("flex:none;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
-                    <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>A sticker + a stamp to paste in your passport</span>
-                  </div>
+                  {ENVELOPE.map((item, i) => (
+                    <div key={item.title} style={css(`display:flex;align-items:flex-start;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry ${10 + i * 3}% cover ${30 + i * 3}%`)} data-hv="0">
+                      <span style={css("flex:none;margin-top:2px;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
+                      <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>
+                        <strong style={css("font-weight:600")}>{item.title}</strong>
+                        <span style={css("display:block;font-size:.86em;line-height:1.55;margin-top:3px;color:color-mix(in srgb, var(--color-text) 66%, transparent)")}>{item.detail}</span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
       
             <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(24px,4vw,52px);align-items:center;margin-top:clamp(44px,7vh,86px);padding-top:clamp(34px,5vh,54px);border-top:1px solid var(--color-divider)")}>
               <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
-                <p style={css("font-size:clamp(16px,2vw,19px);line-height:1.8;text-wrap:pretty;margin-bottom:var(--space-3)")}>Every new reader gets a <em style={css("font-family:var(--font-heading);font-style:italic;font-size:1.22em;color:#b3312f")}>Wanderland Passport</em> with their first letter — a small keepsake to collect a stamp from every town Iris visits.</p>
-                <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3vw,26px);line-height:1.4;margin:0")}>A place to keep her whole journey.</p>
+                <p style={css("font-size:clamp(16px,2vw,19px);line-height:1.8;text-wrap:pretty;margin-bottom:var(--space-3)")}>First-time readers also get a printed <em style={css("font-family:var(--font-heading);font-style:italic;font-size:1.22em;color:#b3312f")}>Wanderland Passport</em> — a small stapled booklet with a page for each month, and a paper stamp to paste in every time an envelope arrives.</p>
+                <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3vw,26px);line-height:1.4;margin:0")}>One booklet, twelve months, twelve stamps.</p>
               </div>
               <div style={css("display:flex;justify-content:center")}>
                 <div style={css("position:relative;width:min(230px,62vw);aspect-ratio:1;display:grid;place-items:center")}>
@@ -376,7 +362,7 @@ export default function TheLittleDoorPost({
             <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 6% cover 24%")}>
               <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>Send me</div>
               <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>A letter</div>
-              <p style={css("max-width:44ch;margin:clamp(22px,4vh,34px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Tell Iris where the door should open. She writes the address by hand, so please give it exactly as your post office likes it.</p>
+              <p style={css("max-width:44ch;margin:clamp(22px,4vh,34px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Tell Iris where to post it. She writes the address by hand, so please give it exactly as your post office likes it.</p>
             </div>
       
             <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(34px,5vw,64px);align-items:start;margin-top:clamp(38px,6vh,68px)")}>
@@ -415,63 +401,11 @@ export default function TheLittleDoorPost({
                   <span ref={statusText} style={css("font-size:13px;line-height:1.4")}>Sign-ups open the 20th of every month.</span>
                 </div>
       
-                {!sealed && (<>
-                  <form onSubmit={onSubmit} onInput={onFormInput} noValidate style={css("display:flex;flex-direction:column;gap:var(--space-3)")}>
-                    <div className="field">
-                      <label htmlFor="ldp-name">Full name</label>
-                      <input className="input" id="ldp-name" name="name" type="text" autoComplete="name" placeholder="The name on the envelope" />
-                    </div>
-                    <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-3)")}>
-                      <div className="field">
-                        <label htmlFor="ldp-email">Email</label>
-                        <input className="input" id="ldp-email" name="email" type="email" autoComplete="email" placeholder="you@somewhere.com" />
-                      </div>
-                      <div className="field">
-                        <label htmlFor="ldp-phone">Phone</label>
-                        <input className="input" id="ldp-phone" name="phone" type="tel" autoComplete="tel" placeholder="For delivery only" />
-                      </div>
-                    </div>
-                    {showAddress && (<>
-                      <div style={css("display:flex;flex-direction:column;gap:var(--space-3)")}>
-                        <div className="field">
-                          <label htmlFor="ldp-street">Street address</label>
-                          <input className="input" id="ldp-street" name="street" type="text" autoComplete="street-address" placeholder="House, street, apartment" />
-                        </div>
-                        <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3)")}>
-                          <div className="field">
-                            <label htmlFor="ldp-city">City</label>
-                            <input className="input" id="ldp-city" name="city" type="text" autoComplete="address-level2" placeholder="Town or city" />
-                          </div>
-                          <div className="field">
-                            <label htmlFor="ldp-postcode">Postcode</label>
-                            <input className="input" id="ldp-postcode" name="postcode" type="text" autoComplete="postal-code" placeholder="ZIP / PIN" />
-                          </div>
-                          <div className="field">
-                            <label htmlFor="ldp-country">Country</label>
-                            <input className="input" id="ldp-country" name="country" type="text" autoComplete="country-name" placeholder="Where you are" />
-                          </div>
-                        </div>
-                      </div>
-                    </>)}
-      
-                    {!!error && (<>
-                      <p style={css("margin:0;font-size:13px;line-height:1.5;color:var(--color-accent-700)")}>{error}</p>
-                    </>)}
-      
-                    <button className="btn btn-primary btn-block" type="submit" style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>Seal my envelope</button>
-                    <p style={css("margin:0;font-size:12px;line-height:1.6;color:color-mix(in srgb, var(--color-text) 55%, transparent);text-align:center")}>Your envelope arrives 1–2 weeks later, depending on where you are.</p>
-                  </form>
-                </>)}
-      
-                {sealed && (<>
-                  <div style={css("border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-neutral-100);animation-name:ldp-rise;animation-duration:.7s;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1)")}>
-                    <div style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(26px,4.4vw,34px);line-height:1.2;color:var(--color-accent-700)")}>Your envelope is addressed.</div>
-                    <hr className="hr" />
-                    <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3);text-wrap:pretty")}>Iris has your address. Your letter goes out with this month's post, and your Wanderland Passport travels with it.</p>
-                    <p style={css("font-size:15px;line-height:1.8;margin:0;text-wrap:pretty")}>Watch your letterbox in 1–2 weeks, depending on where you are.</p>
-                    <button className="btn btn-secondary" type="button" onClick={onReset} style={css("margin-top:var(--space-4)")}>Address another</button>
-                  </div>
-                </>)}
+                <SubscribeForm
+                  onAddressChange={onAddressChange}
+                  onSealed={onSealed}
+                  onUnsealed={onUnsealed}
+                />
               </div>
             </div>
           </div>
@@ -480,7 +414,7 @@ export default function TheLittleDoorPost({
         <footer style={css("border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px)")}>
           <div style={css("width:min(1080px,100%);margin:0 auto;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:baseline;justify-content:space-between")}>
             <div style={css("font-family:var(--font-heading);font-size:clamp(17px,3vw,21px)")}>The Little Door Post</div>
-            <div style={css("font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)")}>One envelope a month · Posted worldwide</div>
+            <div style={css("font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)")}>One envelope a month · Posted across India</div>
           </div>
         </footer>
       </div>
