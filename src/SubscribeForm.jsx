@@ -1,12 +1,12 @@
 /*  The sign-up flow, in four stages:
  *
  *    region  →  is the envelope going to India or somewhere else?
+ *                (somewhere else stops there — nothing abroad is sold or stored)
  *    details →  everything Iris needs to address it
  *    pay     →  Razorpay Checkout
  *    sealed  →  confirmed
  *
- *  Readers outside India go region → waitlisted; there is no international post
- *  yet, so there is nothing to charge them for.
+ *  Readers outside India are simply told so: no form, no request, no row.
  *
  *  Payments are switched on by the backend, not here: /api/config reports
  *  paymentsEnabled, and each sign-up comes back with a payment block whose
@@ -47,6 +47,7 @@ const STATES = [
 ];
 
 const EMPTY = {
+  plan_months: 1,
   full_name: "", email: "", phone: "", instagram: "",
   address_line1: "", address_line2: "", landmark: "", city: "", state: "", pincode: "",
   country: "", birthdate: "", interests: [], interests_note: "",
@@ -76,6 +77,65 @@ const Field = ({ id, label, optional, hint, error, children }) => (
   </div>
 );
 
+/* How long they are subscribing for. The lengths and their prices come from
+ * /api/config — which reads them from the plans table — so a price change never
+ * needs a redeploy, and this renders whatever is on offer rather than a
+ * hardcoded three. */
+const PlanPicker = ({ options, value, onChange, error }) => {
+  if (!options?.length) return null;
+
+  return (
+    <div className="field">
+      <label>How many months?</label>
+      <div
+        style={css(
+          "display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:var(--space-2);margin-top:2px"
+        )}
+      >
+        {options.map((plan) => {
+          const on = plan.months === value;
+          return (
+            <button
+              key={plan.months}
+              type="button"
+              onClick={() => onChange(plan.months)}
+              aria-pressed={on}
+              style={css(
+                "cursor:pointer;font:inherit;text-align:left;padding:12px 13px;border-radius:var(--radius-md);transition:background .2s,border-color .2s;" +
+                  (on
+                    ? "border:1px solid var(--color-accent);background:var(--color-accent-100)"
+                    : "border:1px solid var(--color-divider);background:transparent")
+              )}
+            >
+              <div
+                style={css(
+                  "font-family:var(--font-heading);font-size:17px;line-height:1.1;" +
+                    (on ? "color:var(--color-accent-800)" : "color:var(--color-text)")
+                )}
+              >
+                {plan.months} {plan.months === 1 ? "month" : "months"}
+              </div>
+              <div style={css("font-size:15px;line-height:1.3;margin-top:4px")}>{plan.display}</div>
+              {plan.months > 1 && (
+                <div
+                  style={css(
+                    "font-size:11px;line-height:1.4;margin-top:2px;color:color-mix(in srgb, var(--color-text) 58%, transparent)"
+                  )}
+                >
+                  {plan.perMonthDisplay} a month
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {error && (
+        <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>{error}</div>
+      )}
+    </div>
+  );
+};
+
 const Notice = ({ tone = "error", children }) =>
   !children ? null : (
     <p
@@ -92,7 +152,10 @@ const Notice = ({ tone = "error", children }) =>
 
 export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed }) {
   const [config, setConfig] = useState(null);
-  const [offline, setOffline] = useState("");
+  /* Only ever a warning. The form does not need /config to work — it carries
+   * the price and nothing else — so a slow or missing answer must not be
+   * allowed to bar the way, which is what disabling these buttons used to do. */
+  const [configFailed, setConfigFailed] = useState(false);
 
   const [stage, setStage] = useState("region");
   const [region, setRegion] = useState(null);
@@ -104,11 +167,14 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   const [subscription, setSubscription] = useState(null);
   const [payment, setPayment] = useState(null);
 
+  /* Usually already resolved by the time this mounts — main.jsx starts the
+   * same single-flight request at app load, so this joins it rather than
+   * making a second one. */
   useEffect(() => {
     let live = true;
     getConfig()
       .then((c) => live && setConfig(c))
-      .catch((err) => live && setOffline(err.message));
+      .catch(() => live && setConfigFailed(true));
     return () => {
       live = false;
     };
@@ -128,6 +194,22 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     setValues((v) => ({ ...v, [name]: value }));
     setFieldErrs((e) => (e[name] ? { ...e, [name]: undefined } : e));
   }, []);
+
+  /* The plans on offer for a region, and the cheapest per-month among them —
+   * both empty until /config lands, which the callers cope with. */
+  const plansFor = useCallback((r) => config?.plans?.[r] || [], [config]);
+
+  /* The best per-month rate on offer, for the "from ₹x a month" line. */
+  const monthly = useCallback(
+    (r) => {
+      const best = plansFor(r).reduce(
+        (a, b) => (!a || b.amountMinor / b.months < a.amountMinor / a.months ? b : a),
+        null
+      );
+      return best && { display: best.perMonthDisplay || best.display };
+    },
+    [plansFor]
+  );
 
   const onChange = useCallback((e) => set(e.target.name, e.target.value), [set]);
 
@@ -164,6 +246,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     const clean = (s) => (typeof s === "string" ? s.trim() : s);
     const base = {
       region,
+      plan_months: values.plan_months,
       full_name: clean(values.full_name),
       email: clean(values.email),
       phone: clean(values.phone),
@@ -197,8 +280,9 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
       const result = await createSubscription(payload);
       setSubscription(result.subscription);
       setPayment(result.payment);
-      setStage(region === "india" ? "pay" : "waitlisted");
-      if (region !== "india") onSealed?.();
+      /* Only the India form submits — the international branch never gets
+       * here, because it has no form to submit. */
+      setStage("pay");
     } catch (err) {
       setFieldErrs(err.fields || {});
       setFormError(err.message);
@@ -278,95 +362,66 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   if (stage === "region") {
     return (
       <div style={gap}>
-        <Notice tone="info">
-          {offline
-            ? "Iris cannot be reached right now — the sign-up desk is offline. Please try again shortly."
-            : "First things first: where should the envelope be posted?"}
-        </Notice>
+        <Notice tone="info">First things first: where should the envelope be posted?</Notice>
+        {configFailed && (
+          <Notice>
+            The sign-up desk is slow to answer just now. You can still fill everything in &mdash;
+            if it will not send, give it a minute and try again.
+          </Notice>
+        )}
         <button
           className="btn btn-primary btn-block"
           type="button"
-          disabled={!!offline}
           onClick={() => chooseRegion("india")}
           style={css("padding:16px 22px;font-size:15px;flex-direction:column;gap:3px;margin-top:0")}
         >
           <span>Post it within India</span>
           <span style={css("font-family:var(--font-body);font-size:12px;opacity:.75")}>
-            {config ? `₹${config.priceInr} for the month's envelope` : "Sign up below"}
+            {monthly("india") ? `From ${monthly("india").display} a month` : "One envelope a month"}
           </span>
         </button>
         <button
           className="btn btn-secondary btn-block"
           type="button"
-          disabled={!!offline}
           onClick={() => chooseRegion("international")}
           style={css("padding:16px 22px;font-size:15px;flex-direction:column;gap:3px;margin-top:0")}
         >
           <span>Post it outside India</span>
           <span style={css("font-family:var(--font-body);font-size:12px;opacity:.7")}>
-            Not available yet &mdash; join the list
+            Not available yet
           </span>
         </button>
       </div>
     );
   }
 
-  /* ── outside India: not yet ──────────────────────────────────────────── */
+  /* ── outside India: nothing to collect ─────────────────────────────────
+   *
+   * No form and no request. There is no shipping abroad yet, so there is
+   * nothing to sell and nothing worth keeping — and no promise made that would
+   * need an address to keep it.
+   */
   if (stage === "international") {
     return (
-      <form onSubmit={submitDetails} style={gap}>
+      <div style={gap}>
         <div style={panel}>
           <h3 style={heading}>Not posting there yet.</h3>
           <hr className="hr" />
           <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            The Little Door Post ships within India only for now. Postage and customs for other
-            countries are still being worked out.
+            The Little Door Post ships within India only. Postage and customs for other
+            countries are still being worked out, and until that is settled there is no
+            honest way to promise you an envelope.
           </p>
           <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-            Leave your details and you&rsquo;ll be the first to hear when shipping opens. Nothing
-            is charged.
+            Do follow along on Instagram &mdash; that is where it will be announced first,
+            the moment Iris can post further afield.
           </p>
         </div>
-
-        <Field id="ldp-i-name" label="Full name" error={fieldErrs.full_name}>
-          <input className="input" id="ldp-i-name" name="full_name" type="text" required
-            autoComplete="name" value={values.full_name} onChange={onChange}
-            placeholder="The name on the envelope" />
-        </Field>
-        <div style={twoUp}>
-          <Field id="ldp-i-email" label="Email" error={fieldErrs.email}>
-            <input className="input" id="ldp-i-email" name="email" type="email" required
-              autoComplete="email" value={values.email} onChange={onChange}
-              placeholder="you@somewhere.com" />
-          </Field>
-          <Field id="ldp-i-country" label="Country" error={fieldErrs.country}>
-            <input className="input" id="ldp-i-country" name="country" type="text" required
-              autoComplete="country-name" value={values.country} onChange={onChange}
-              placeholder="Where you are" />
-          </Field>
-        </div>
-        <div style={twoUp}>
-          <Field id="ldp-i-phone" label="Phone" error={fieldErrs.phone}>
-            <input className="input" id="ldp-i-phone" name="phone" type="tel" required
-              autoComplete="tel" value={values.phone} onChange={onChange}
-              placeholder="With country code" />
-          </Field>
-          <Field id="ldp-i-insta" label="Instagram" optional error={fieldErrs.instagram}>
-            <input className="input" id="ldp-i-insta" name="instagram" type="text"
-              value={values.instagram} onChange={onChange} placeholder="@yourhandle" />
-          </Field>
-        </div>
-
-        <Notice>{formError}</Notice>
-
-        <button className="btn btn-primary btn-block" type="submit" disabled={busy}
-          style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
-          {busy ? "Sending…" : "Tell me when it opens"}
+        <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
+          style={css("margin-top:0")}>
+          &larr; Back
         </button>
-        <button className="btn btn-ghost" type="button" onClick={startOver} style={css("font-size:13px")}>
-          &larr; I&rsquo;m in India after all
-        </button>
-      </form>
+      </div>
     );
   }
 
@@ -374,6 +429,13 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   if (stage === "details") {
     return (
       <form onSubmit={submitDetails} style={gap}>
+        <PlanPicker
+          options={plansFor("india")}
+          value={values.plan_months}
+          onChange={(m) => set("plan_months", m)}
+          error={fieldErrs.plan_months}
+        />
+
         <Field id="ldp-name" label="Full name" error={fieldErrs.full_name}
           hint="Exactly as your post office likes it — Iris writes it by hand.">
           <input className="input" id="ldp-name" name="full_name" type="text" required
@@ -505,7 +567,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
 
   /* ── India: payment ──────────────────────────────────────────────────── */
   if (stage === "pay") {
-    const amount = payment?.amount_inr ?? config?.priceInr;
+    const amount = payment?.amount_display || subscription?.amount_display;
 
     /* Razorpay is not switched on yet — say so plainly and keep the details
      * that have already been saved. Nothing is charged. */
@@ -544,8 +606,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
                 "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 65%, transparent)"
               )}
             >
-              When it opens, one envelope for the month costs &#8377;{amount}, including delivery
-              anywhere in India.
+              When it opens, your subscription costs {amount}, including delivery anywhere in India.
             </p>
           </div>
           <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
@@ -567,14 +628,14 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             )}
           >
             <span style={css("font-size:15px;line-height:1.6")}>
-              One envelope &mdash; {subscription.cycle}
+              {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"} &mdash; from {subscription.cycle}
             </span>
             <span
               style={css(
                 "font-family:var(--font-heading);font-size:clamp(22px,4vw,28px);line-height:1;white-space:nowrap"
               )}
             >
-              &#8377;{amount}
+              {amount}
             </span>
           </div>
           <p
@@ -582,7 +643,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
             )}
           >
-            Six printed pieces, posted to your address. Delivery within India is included. Payment
+            Six printed pieces every month, posted to your address. Delivery within India is included. Payment
             is handled by Razorpay &mdash; card, UPI, net banking or wallet.
           </p>
         </div>
@@ -592,36 +653,11 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
         <button className="btn btn-primary btn-block" type="button" disabled={busy}
           onClick={openCheckout}
           style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
-          {busy ? "Opening…" : `Pay ₹${amount}`}
+          {busy ? "Opening…" : `Pay ${amount}`}
         </button>
         <button className="btn btn-ghost" type="button" onClick={() => setStage("details")}
           style={css("font-size:13px")}>
           &larr; Change my details
-        </button>
-      </div>
-    );
-  }
-
-  /* ── outside India: on the list ──────────────────────────────────────── */
-  if (stage === "waitlisted") {
-    return (
-      <div
-        style={css(
-          "border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-neutral-100)"
-        )}
-      >
-        <div style={heading}>You&rsquo;re on the list.</div>
-        <hr className="hr" />
-        <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-          Iris has your name and your corner of the world. The moment international shipping opens,
-          you&rsquo;ll hear from her before anyone else.
-        </p>
-        <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-          Nothing has been charged &mdash; there is nothing to pay for yet.
-        </p>
-        <button className="btn btn-secondary" type="button" onClick={startOver}
-          style={css("margin-top:var(--space-4)")}>
-          Add someone else
         </button>
       </div>
     );

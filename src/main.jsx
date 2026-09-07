@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import { warmUp } from "./api.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
 import TheRedRace from "./TheRedRace.jsx";
 
@@ -26,6 +27,20 @@ const PAGES = {
 
 function App() {
   const [route, setRoute] = useState(parseHash);
+
+  /* Wake the API the moment anything renders, whichever page that is.
+   *
+   * It matters that this lives here and not in the sign-up form: a reader who
+   * arrives on #/the-red-race — the page worth sharing — never mounts that
+   * form, so warming from inside it would leave them waiting out the whole
+   * cold start after they clicked "Receive a letter". Here, the letter is the
+   * wait.
+   *
+   * Safe to run twice: getConfig() is single-flight, so StrictMode's second
+   * pass in development joins the first request rather than starting another. */
+  useEffect(() => {
+    warmUp();
+  }, []);
 
   useEffect(() => {
     const onHashChange = () => setRoute(parseHash());

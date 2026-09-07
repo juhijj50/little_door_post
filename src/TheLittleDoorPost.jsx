@@ -7,10 +7,11 @@
  *
  *  Props
  *    envelopeColor  hex — the envelope's paper colour            (default "#5e7150")
- *    signupWindow   "Automatic" | "Open now" | "Closed"          (default "Automatic")
+ *    The sign-up window comes from the API, which reads it from the database.
  */
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "./css.js";
+import { getConfig } from "./api.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 
 const STYLE = `html { scroll-behavior: smooth; }
@@ -84,27 +85,40 @@ const shade = (hex, amt) => {
   );
 };
 
-function windowState(mode) {
+/* The sign-up window, described from whatever /api/config reports.
+ *
+ * The dates are not computed here any more: they live in the database, one row
+ * per month, so a window that has been moved by hand is the one the site
+ * describes. Until config arrives — or if it never does — this falls back to
+ * the standard rule so the page is never blank. */
+function windowState(config) {
+  if (!config) {
+    return { open: false, text: "Sign-ups open on the 15th of every month." };
+  }
+
   const now = new Date();
-  const d = now.getDate();
-  if (mode === "Open now") return { open: true, text: "Sign-ups are open. Send your address and Iris packs it with this month\u2019s post." };
-  if (mode === "Closed") return { open: false, text: "Sign-ups are closed for this month. The next window opens on the 20th." };
-  if (d >= 20) {
-    const days = Math.max(1, Math.ceil((new Date(now.getFullYear(), now.getMonth() + 1, 2) - now) / 86400000));
-    return { open: true, text: `Sign-ups are open \u2014 they close on the 2nd, ${days} day${days === 1 ? "" : "s"} from now.` };
+  const opens = new Date(config.opensAt);
+  const closes = new Date(config.closesAt);
+  const days = (to) => Math.max(1, Math.ceil((to - now) / 86400000));
+  const plural = (n) => `${n} day${n === 1 ? "" : "s"}`;
+
+  if (config.signupOpen) {
+    return {
+      open: true,
+      text: `Sign-ups are open — they close on the 5th, ${plural(days(closes))} from now.`,
+    };
   }
-  if (d <= 2) {
-    const days = Math.max(1, Math.ceil((new Date(now.getFullYear(), now.getMonth(), 2, 23, 59) - now) / 86400000));
-    return { open: true, text: `Sign-ups close on the 2nd \u2014 ${days} day${days === 1 ? "" : "s"} left to send your address.` };
-  }
-  const days = 20 - d;
-  return { open: false, text: `Sign-ups open on the 20th \u2014 ${days} day${days === 1 ? "" : "s"} away.` };
+  return {
+    open: false,
+    text: `Sign-ups open on the 15th — ${plural(days(opens))} away.`,
+  };
 }
 
-export default function TheLittleDoorPost({
-  envelopeColor = "#5e7150",
-  signupWindow = "Automatic",
-}) {
+export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
+  /* Shares the single-flight request main.jsx already started, so reading the
+   * window here costs no extra call. */
+  const [config, setConfig] = useState(null);
+
   const rootRef = useRef(null);
   const headerRef = useRef(null);
   const envWrap = useRef(null);
@@ -126,12 +140,18 @@ export default function TheLittleDoorPost({
     if (flap) flap.style.background = shade(envelopeColor, -18);
   }, [envelopeColor]);
 
+  useEffect(() => {
+    let live = true;
+    getConfig().then((c) => live && setConfig(c)).catch(() => {});
+    return () => { live = false; };
+  }, []);
+
   /* sign-up window copy */
   useEffect(() => {
-    const w = windowState(signupWindow);
+    const w = windowState(config);
     if (statusText.current) statusText.current.textContent = w.text;
-    if (statusTop.current) statusTop.current.textContent = w.open ? "Sign-ups are open now" : "Sign-ups open the 20th of every month";
-  }, [signupWindow]);
+    if (statusTop.current) statusTop.current.textContent = w.open ? "Sign-ups are open now" : "Sign-ups open the 15th of every month";
+  }, [config]);
 
   /* sticky header shadow + decorations off on small screens */
   useEffect(() => {
@@ -213,7 +233,7 @@ export default function TheLittleDoorPost({
             <a className="btn btn-secondary" href="#how" style={css("padding:12px 24px;font-size:15px;white-space:nowrap")}>How it works</a>
           </div>
       
-          <div ref={statusTop} style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups open the 20th of every month</div>
+          <div ref={statusTop} style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups open the 15th of every month</div>
       
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
             <span>Posted across India</span>
@@ -280,11 +300,11 @@ export default function TheLittleDoorPost({
               <div style={css("display:grid;grid-template-columns:clamp(44px,7.4vw,58px) 1fr;gap:0 clamp(16px,3vw,26px);align-items:center")}>
               <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 32%")}>1</div>
               <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 32%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Sign-ups open the 20th of every month</p>
+                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Sign-ups open the 15th of every month</p>
               </div>
               <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 16% cover 36%")}>2</div>
               <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 16% cover 36%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>They close on the 2nd of the following month</p>
+                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>They close on the 5th of the following month</p>
               </div>
               <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 20% cover 40%")}>3</div>
               <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 20% cover 40%")}>
@@ -398,7 +418,7 @@ export default function TheLittleDoorPost({
               <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
                 <div style={css("display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);margin-bottom:var(--space-4)")}>
                   <span style={css("width:7px;height:7px;border-radius:50%;background:var(--color-accent);flex:none")}></span>
-                  <span ref={statusText} style={css("font-size:13px;line-height:1.4")}>Sign-ups open the 20th of every month.</span>
+                  <span ref={statusText} style={css("font-size:13px;line-height:1.4")}>Sign-ups open the 15th of every month.</span>
                 </div>
       
                 <SubscribeForm

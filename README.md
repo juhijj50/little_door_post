@@ -45,6 +45,29 @@ missing it shows a "payments are not live yet" panel with the reader's
 reference; once they are set the same stage opens Razorpay Checkout. Nothing on
 the site needs changing to switch it on — see `../backend/README.md`.
 
+## Waking a sleeping API
+
+The API is on Render's free plan, which sleeps after 15 minutes idle and takes
+most of a minute to wake, answering 502 while it does. Three things in `api.js`
+and `main.jsx` deal with that:
+
+- **`warmUp()` runs at app load, in `main.jsx`.** Not in the sign-up form —
+  a reader arriving on `#/the-red-race` never mounts that form, so warming from
+  inside it would leave them waiting out the cold start after clicking through.
+  Warming at app level means the letter is the wait.
+- **`/config` is single-flight and cached.** The warm-up ping and the form's
+  own read share one request and one answer, however they interleave.
+- **Retries with backoff, about 45 seconds' worth.** A 502 mid-wake is a pause,
+  not a failure. A 4xx is not retried — repeating it changes nothing.
+
+Retries are opt-in per call, and deliberately so: `createSubscription` must
+never be repeated, or a dropped reply could sign someone up twice.
+`verifyPayment` *is* retried, because it runs after money has changed hands and
+the endpoint is idempotent.
+
+The form never blocks on any of this — it does not need `/config` to work, only
+to show the price.
+
 ## Envelope contents
 
 `ENVELOPE` at the top of `src/TheLittleDoorPost.jsx` is the list readers see.
