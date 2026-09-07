@@ -97,20 +97,25 @@ function windowState(config) {
   }
 
   const now = new Date();
-  const opens = new Date(config.opensAt);
-  const closes = new Date(config.closesAt);
-  const days = (to) => Math.max(1, Math.ceil((to - now) / 86400000));
+  const days = (to) => Math.max(1, Math.ceil((new Date(to) - now) / 86400000));
   const plural = (n) => `${n} day${n === 1 ? "" : "s"}`;
+  /* Named in Indian time, to match the panel below and the post itself. */
+  const day = (iso) =>
+    new Date(iso).toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "long",
+    });
 
   if (config.signupOpen) {
     return {
       open: true,
-      text: `Sign-ups are open — they close on the 5th, ${plural(days(closes))} from now.`,
+      text: `Sign-ups are open — they close on ${day(config.closesAt)}, ${plural(days(config.closesAt))} from now.`,
     };
   }
   return {
     open: false,
-    text: `Sign-ups open on the 15th — ${plural(days(opens))} away.`,
+    text: `Sign-ups open on ${day(config.opensAt)} — ${plural(days(config.opensAt))} away.`,
   };
 }
 

@@ -53,6 +53,40 @@ const EMPTY = {
   country: "", birthdate: "", interests: [], interests_note: "",
 };
 
+/* Dates are always written in Indian time, whatever the reader's clock says.
+ * Left to the browser, a viewer abroad could be told sign-ups open on the 14th
+ * when the answer is the 15th everywhere the post actually goes. */
+const IST = "Asia/Kolkata";
+
+const formatDay = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-IN", {
+    timeZone: IST,
+    day: "numeric",
+    month: "long",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+};
+
+/* "in 6 days" / "tomorrow", or nothing once the date has passed. */
+const countdown = (iso) => {
+  const days = Math.ceil((new Date(iso) - new Date()) / 86400000);
+  if (Number.isNaN(days) || days < 0) return "";
+  if (days === 0) return "later today";
+  if (days === 1) return "tomorrow";
+  return `in ${days} days`;
+};
+
+/* '2026-10' -> 'October'. Built from a fixed day so no timezone can nudge it
+ * into the neighbouring month. */
+const monthName = (cycle) => {
+  const [year, month] = String(cycle || "").split("-").map(Number);
+  if (!year || !month) return "";
+  return new Date(year, month - 1, 15).toLocaleDateString("en-IN", { month: "long" });
+};
+
 /* Defined at module scope so React keeps the input mounted between renders —
  * a component defined inside the render loses focus on every keystroke. */
 const Field = ({ id, label, optional, hint, error, children }) => (
@@ -357,6 +391,59 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   const heading = css(
     "font-family:var(--font-heading);font-style:italic;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-700);margin:0"
   );
+
+  /* ── closed: no form at all ────────────────────────────────────────────
+   *
+   * Shown instead of the form, not alongside it. Filling in an address only to
+   * be told at the end that the desk is shut is a waste of somebody's evening;
+   * far better to say when to come back before they start.
+   *
+   * Only when the API has actually said so. While config is loading, or if it
+   * never arrives, the form stays — a slow API must not look like a shut door,
+   * and a sign-up that gets through is worth more than a tidy message.
+   */
+  if (config && !config.signupOpen && stage === "region") {
+    return (
+      <div style={gap}>
+        <div style={panel}>
+          <h3 style={heading}>The desk is shut just now.</h3>
+          <hr className="hr" />
+          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
+            Sign-ups open on{" "}
+            <strong>{formatDay(config.opensAt)}</strong>
+            {countdown(config.opensAt) && (
+              <span style={css("color:color-mix(in srgb, var(--color-text) 62%, transparent)")}>
+                {" "}&mdash; {countdown(config.opensAt)}
+              </span>
+            )}
+            . Come back then and the form will be right here.
+          </p>
+          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
+            That window fills the <strong>{monthName(config.cycle)}</strong> envelope, and it
+            stays open until {formatDay(config.closesAt)}.
+          </p>
+          {plansFor("india").length > 0 && (
+            <p
+              style={css(
+                "font-size:13px;line-height:1.7;margin:0;color:color-mix(in srgb, var(--color-text) 65%, transparent)"
+              )}
+            >
+              {plansFor("india")
+                .map((p) => `${p.months} ${p.months === 1 ? "letter" : "letters"} ${p.display}`)
+                .join("  ·  ")}
+            </p>
+          )}
+        </div>
+        <p
+          style={css(
+            "margin:0;font-size:13px;line-height:1.7;text-align:center;color:color-mix(in srgb, var(--color-text) 60%, transparent)"
+          )}
+        >
+          Sign-ups run from the 15th of each month to the 5th of the next.
+        </p>
+      </div>
+    );
+  }
 
   /* ── which door? ─────────────────────────────────────────────────────── */
   if (stage === "region") {
