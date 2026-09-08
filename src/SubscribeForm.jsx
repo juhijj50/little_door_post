@@ -19,6 +19,7 @@ import {
   createSubscription,
   getConfig,
   loadRazorpayCheckout,
+  requestReminder,
   verifyPayment,
 } from "./api.js";
 
@@ -201,6 +202,11 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   const [subscription, setSubscription] = useState(null);
   const [payment, setPayment] = useState(null);
 
+  /* The "tell me when it opens" form, shown only while the window is shut. */
+  const [reminderHandle, setReminderHandle] = useState("");
+  const [reminderState, setReminderState] = useState("idle"); // idle | sending | done
+  const [reminderError, setReminderError] = useState("");
+
   /* Usually already resolved by the time this mounts — main.jsx starts the
    * same single-flight request at app load, so this joins it rather than
    * making a second one. */
@@ -233,18 +239,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
    * both empty until /config lands, which the callers cope with. */
   const plansFor = useCallback((r) => config?.plans?.[r] || [], [config]);
 
-  /* The best per-month rate on offer, for the "from ₹x a month" line. */
-  const monthly = useCallback(
-    (r) => {
-      const best = plansFor(r).reduce(
-        (a, b) => (!a || b.amountMinor / b.months < a.amountMinor / a.months ? b : a),
-        null
-      );
-      return best && { display: best.perMonthDisplay || best.display };
-    },
-    [plansFor]
-  );
-
   const onChange = useCallback((e) => set(e.target.name, e.target.value), [set]);
 
   const toggleInterest = useCallback((interest) => {
@@ -257,6 +251,20 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           : [...v.interests, interest],
     }));
   }, []);
+
+  const askForReminder = async (e) => {
+    e.preventDefault();
+    if (reminderState === "sending") return;
+    setReminderState("sending");
+    setReminderError("");
+    try {
+      await requestReminder({ instagram: reminderHandle.trim() });
+      setReminderState("done");
+    } catch (err) {
+      setReminderError(err.fields?.instagram || err.message);
+      setReminderState("idle");
+    }
+  };
 
   const chooseRegion = (next) => {
     setRegion(next);
@@ -409,8 +417,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           <h3 style={heading}>The desk is shut just now.</h3>
           <hr className="hr" />
           <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            Sign-ups open on{" "}
-            <strong>{formatDay(config.opensAt)}</strong>
+            Sign-ups open on <strong>{formatDay(config.opensAt)}</strong>
             {countdown(config.opensAt) && (
               <span style={css("color:color-mix(in srgb, var(--color-text) 62%, transparent)")}>
                 {" "}&mdash; {countdown(config.opensAt)}
@@ -418,28 +425,64 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             )}
             . Come back then and the form will be right here.
           </p>
-          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
+          <p style={css("font-size:15px;line-height:1.8;margin:0")}>
             That window fills the <strong>{monthName(config.cycle)}</strong> envelope, and it
             stays open until {formatDay(config.closesAt)}.
           </p>
-          {plansFor("india").length > 0 && (
-            <p
-              style={css(
-                "font-size:13px;line-height:1.7;margin:0;color:color-mix(in srgb, var(--color-text) 65%, transparent)"
-              )}
-            >
-              {plansFor("india")
-                .map((p) => `${p.months} ${p.months === 1 ? "letter" : "letters"} ${p.display}`)
-                .join("  ·  ")}
-            </p>
-          )}
         </div>
+
+        {/* Rather than ask them to remember a date, take a handle and nudge
+          * them. One ask is enough — the server keeps the first and quietly
+          * ignores the rest, so tapping twice cannot spam anyone. */}
+        {reminderState === "done" ? (
+          <div style={panel}>
+            <div style={heading}>Noted.</div>
+            <hr className="hr" />
+            <p style={css("font-size:15px;line-height:1.8;margin:0")}>
+              Iris will message <strong>@{reminderHandle.trim().replace(/^@/, "")}</strong> on
+              Instagram when sign-ups open. Nothing else to do.
+            </p>
+          </div>
+        ) : (
+          <form onSubmit={askForReminder} style={gap}>
+            <Field
+              id="ldp-remind"
+              label="Want a nudge when it opens?"
+              hint="Your Instagram handle — Iris will send you a message, once."
+              error={reminderError}
+            >
+              <input
+                className="input"
+                id="ldp-remind"
+                type="text"
+                required
+                value={reminderHandle}
+                onChange={(e) => {
+                  setReminderHandle(e.target.value);
+                  setReminderError("");
+                }}
+                placeholder="@yourhandle"
+              />
+            </Field>
+            <button
+              className="btn btn-secondary btn-block"
+              type="submit"
+              disabled={reminderState === "sending"}
+              style={css("margin-top:0")}
+            >
+              {reminderState === "sending" ? "Just a moment…" : "Remind me"}
+            </button>
+          </form>
+        )}
+
         <p
           style={css(
             "margin:0;font-size:13px;line-height:1.7;text-align:center;color:color-mix(in srgb, var(--color-text) 60%, transparent)"
           )}
         >
           Sign-ups run from the 15th of each month to the 5th of the next.
+          <br />
+          Posting outside India is coming soon.
         </p>
       </div>
     );
@@ -464,7 +507,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
         >
           <span>Post it within India</span>
           <span style={css("font-family:var(--font-body);font-size:12px;opacity:.75")}>
-            {monthly("india") ? `From ${monthly("india").display} a month` : "One envelope a month"}
+            One envelope a month
           </span>
         </button>
         <button
@@ -475,7 +518,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
         >
           <span>Post it outside India</span>
           <span style={css("font-family:var(--font-body);font-size:12px;opacity:.7")}>
-            Not available yet
+            Coming soon
           </span>
         </button>
       </div>
@@ -500,8 +543,8 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             honest way to promise you an envelope.
           </p>
           <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-            Do follow along on Instagram &mdash; that is where it will be announced first,
-            the moment Iris can post further afield.
+            <strong>International post is coming soon.</strong> Do follow along on Instagram
+            &mdash; that is where it will be announced the moment Iris can post further afield.
           </p>
         </div>
         <button className="btn btn-secondary btn-block" type="button" onClick={startOver}

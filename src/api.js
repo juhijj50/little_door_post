@@ -117,6 +117,11 @@ export const warmUp = () => {
   getConfig().catch(() => {});
 };
 
+/* "Tell me when sign-ups open." Not retried: asking twice is harmless on the
+ * server, but a silent second attempt is not worth the request. */
+export const requestReminder = (payload) =>
+  request("/reminders", { method: "POST", body: payload });
+
 export const createSubscription = (payload) =>
   request("/subscriptions", { method: "POST", body: payload });
 
