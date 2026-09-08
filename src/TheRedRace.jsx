@@ -189,7 +189,7 @@ export default function TheRedRace() {
               "font-family:var(--font-heading);font-size:clamp(15px,3.4vw,19px);letter-spacing:.02em;margin-right:auto;text-decoration:none;color:var(--color-text);white-space:nowrap"
             )}
           >
-            <img src="/assets/logo.png" alt="" style={css("width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;display:inline-block;vertical-align:middle;margin-right:8px")} />
+            <img src="/assets/logo.webp" alt="" style={css("width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none;display:inline-block;vertical-align:middle;margin-right:8px")} />
             &larr; The Little Door Post
           </a>
           <a className="btn btn-primary" href="#/#subscribe" style={css("white-space:nowrap")}>

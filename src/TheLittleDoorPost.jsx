@@ -215,7 +215,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
       
         <header ref={headerRef} style={css("position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:clamp(14px,3vw,30px);padding:11px clamp(16px,4vw,44px);background:color-mix(in srgb, var(--color-bg) 92%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--color-divider);transition:box-shadow .4s")}>
           <a href="#top" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
-            <img src="/assets/logo.png" alt="" style={css("width:clamp(30px,6vw,38px);height:clamp(30px,6vw,38px);border-radius:50%;object-fit:cover;flex:none")} />
+            <img src="/assets/logo.webp" alt="" style={css("width:clamp(30px,6vw,38px);height:clamp(30px,6vw,38px);border-radius:50%;object-fit:cover;flex:none")} />
             <span style={css("font-family:var(--font-heading);font-size:clamp(15px,3.4vw,19px);letter-spacing:.02em;white-space:nowrap")}>The Little Door Post</span>
           </a>
           <a data-navlink="1" href="#meet" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>Meet Iris</a>
@@ -227,7 +227,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
       
         <section id="top" style={css("position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 clamp(20px,5vw,40px) clamp(104px,14vh,132px);overflow:hidden;text-align:center")}>
           <div style={css("align-self:stretch;position:relative;margin:0 calc(-1 * clamp(20px,5vw,40px)) clamp(26px,4.5vh,48px);line-height:0")}>
-            <img src="/assets/hero-band.png" alt="A watercolour meadow of wildflowers, toadstools and sealed letters, with post-carrying fairies" style={css("width:100%;height:clamp(170px,32svh,380px);object-fit:cover;object-position:50% 62%;animation-name:ldp-fade;animation-duration:1.4s;animation-fill-mode:both")} />
+            <img src="/assets/hero-band.webp" alt="A watercolour meadow of wildflowers, toadstools and sealed letters, with post-carrying fairies" style={css("width:100%;height:clamp(170px,32svh,380px);object-fit:cover;object-position:50% 62%;animation-name:ldp-fade;animation-duration:1.4s;animation-fill-mode:both")} />
             <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
           </div>
           <div style={css("position:absolute;left:50%;top:56%;width:min(620px,90vw);aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(circle, color-mix(in srgb, var(--color-accent) 22%, transparent) 0%, transparent 62%);animation-name:ldp-bloom;animation-duration:7s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate;pointer-events:none")}></div>
@@ -288,7 +288,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
                 </a>
               </div>
               <div style={css("display:flex;justify-content:center;animation-name:ldp-parallax;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:view();animation-range:cover 0% cover 100%")}>
-                <img src="/assets/iris.png" alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her" style={css("width:min(440px,88vw);filter:drop-shadow(0 22px 38px rgba(20,26,16,.38))")} />
+                <img src="/assets/iris.webp" alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her" style={css("width:min(440px,88vw);filter:drop-shadow(0 22px 38px rgba(20,26,16,.38))")} />
               </div>
             </div>
           </div>
@@ -332,7 +332,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
         </section>
       
         <section id="inside" style={css("position:relative;padding:clamp(76px,12vh,140px) clamp(20px,5vw,40px) clamp(82px,13vh,150px);overflow:hidden")}>
-          <img src="/assets/envelope-folk.png" alt="Envelope folk of the wood, each carrying a sealed letter" style={css("position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 58%")} />
+          <img src="/assets/envelope-folk.webp" alt="Envelope folk of the wood, each carrying a sealed letter" style={css("position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 58%")} />
           <div style={css("position:absolute;inset:0;background:color-mix(in srgb, var(--color-bg) 74%, transparent)")}></div>
           <div style={css("position:absolute;left:0;right:0;top:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);transform:scaleY(-1);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
           <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
