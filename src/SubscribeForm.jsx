@@ -410,6 +410,40 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
    * never arrives, the form stays — a slow API must not look like a shut door,
    * and a sign-up that gets through is worth more than a tidy message.
    */
+  /* ── still asking ───────────────────────────────────────────────────────
+   *
+   * Whether the window is open is not ours to guess. Falling through to the
+   * form while the answer is in flight is what made a shut month look open on
+   * a cold start: the reader saw a form, filled it in, and only then met a
+   * 409. Better a moment of honest waiting.
+   *
+   * `configFailed` is deliberately not caught here — if the answer never comes
+   * at all, the form is the better bet, since a sign-up that gets through is
+   * worth more than a spinner nobody can pass.
+   */
+  if (!config && !configFailed && stage === "region") {
+    return (
+      <div style={gap}>
+        <div style={panel}>
+          <div
+            style={css(
+              "font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3.4vw,26px);line-height:1.3;color:color-mix(in srgb, var(--color-text) 70%, transparent)"
+            )}
+          >
+            One moment &mdash; Iris is checking the calendar.
+          </div>
+          <p
+            style={css(
+              "margin:var(--space-3) 0 0;font-size:13px;line-height:1.7;color:color-mix(in srgb, var(--color-text) 55%, transparent)"
+            )}
+          >
+            The first visit of the day can take a few seconds while the sign-up desk wakes up.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (config && !config.signupOpen && stage === "region") {
     return (
       <div style={gap}>
