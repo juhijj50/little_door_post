@@ -322,7 +322,7 @@ export default function TheRedRace() {
           </article>
         </section>
 
-        {/* — what happens next — */}
+        {/* — where to go from here — */}
         <section
           style={css(
             "position:relative;padding:clamp(56px,9vh,110px) clamp(20px,5vw,40px);border-top:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-surface) 55%, var(--color-bg));text-align:center"
@@ -330,25 +330,7 @@ export default function TheRedRace() {
         >
           <div style={css("width:min(620px,100%);margin:0 auto")}>
             <div
-              style={css(
-                "font-family:var(--font-heading);font-style:italic;font-size:clamp(26px,4.6vw,38px);line-height:1.3;text-wrap:pretty"
-              )}
-            >
-              Next month, Iris opens the soft yellow door.
-            </div>
-            <p
-              style={css(
-                "margin:clamp(16px,2.6vh,24px) 0 0;font-size:clamp(15px,1.8vw,17px);line-height:1.8;text-wrap:pretty;color:color-mix(in srgb, var(--color-text) 72%, transparent)"
-              )}
-            >
-              Whatever is behind it arrives in your letterbox &mdash; one hand-addressed envelope
-              holding her letter, a letter from someone she meets there, two stickers, an art print
-              and an activity sheet.
-            </p>
-            <div
-              style={css(
-                "display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:clamp(24px,4vh,36px)"
-              )}
+              style={css("display:flex;flex-wrap:wrap;gap:12px;justify-content:center")}
             >
               <a
                 className="btn btn-primary"
