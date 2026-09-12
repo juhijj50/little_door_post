@@ -50,7 +50,9 @@ const STATES = [
 
 const EMPTY = {
   plan_months: 1,
-  full_name: "", email: "", phone: "", instagram: "",
+  first_name: "", last_name: "", email: "",
+  phone_cc: "+91", phone_number: "", instagram: "",
+  promo_code: "", is_gift: false, gift_message: "",
   address_line1: "", address_line2: "", landmark: "", city: "", state: "", pincode: "",
   country: "", birthdate: "", interests: [], interests_note: "",
 };
@@ -79,10 +81,14 @@ const Field = ({ id, label, optional, hint, error, children }) => (
   </div>
 );
 
-/* How long they are subscribing for. The lengths and their prices come from
- * /api/config — which reads them from the plans table — so a price change never
- * needs a redeploy, and this renders whatever is on offer rather than a
- * hardcoded three. */
+/* How long they are subscribing for — a duration, not a quantity. One letter
+ * arrives each month either way; a longer plan is a longer commitment at a
+ * better monthly rate. So each button shows the total it charges, with the
+ * rate underneath as the reason to take the longer one.
+ *
+ * The lengths and both figures come from /api/config — which reads them from
+ * the plans table — so a price change never needs a redeploy, and this renders
+ * whatever is on offer rather than a hardcoded three. */
 const PlanPicker = ({ options, value, onChange, error }) => {
   if (!options?.length) return null;
 
@@ -117,14 +123,14 @@ const PlanPicker = ({ options, value, onChange, error }) => {
               >
                 {plan.months} {plan.months === 1 ? "month" : "months"}
               </div>
-              <div style={css("font-size:15px;line-height:1.3;margin-top:4px")}>{plan.display}</div>
+              <div style={css("font-size:15px;line-height:1.3;margin-top:4px")}>{plan.totalDisplay}</div>
               {plan.months > 1 && (
                 <div
                   style={css(
                     "font-size:11px;line-height:1.4;margin-top:2px;color:color-mix(in srgb, var(--color-text) 58%, transparent)"
                   )}
                 >
-                  {plan.perMonthDisplay} a month
+                  {plan.rateDisplay} a month
                 </div>
               )}
             </button>
@@ -182,7 +188,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   /* Keep the envelope illustration addressed as they type. */
   useEffect(() => {
     onAddressChange?.({
-      name: values.full_name,
+      name: [values.first_name, values.last_name].filter(Boolean).join(" "),
       street: values.address_line1,
       cityLine: [values.city, values.pincode].filter(Boolean).join(" · "),
       country: region === "india" ? "India" : values.country,
@@ -234,9 +240,14 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     const base = {
       region,
       plan_months: values.plan_months,
-      full_name: clean(values.full_name),
+      first_name: clean(values.first_name),
+      last_name: clean(values.last_name),
       email: clean(values.email),
-      phone: clean(values.phone),
+      phone_cc: clean(values.phone_cc) || "+91",
+      phone_number: clean(values.phone_number),
+      promo_code: clean(values.promo_code) || null,
+      is_gift: values.is_gift,
+      gift_message: values.is_gift ? clean(values.gift_message) || null : null,
       instagram: clean(values.instagram) || null,
       birthdate: clean(values.birthdate) || null,
       interests: values.interests,
@@ -289,14 +300,18 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
       const checkout = new Razorpay({
         key: payment.key_id,
         order_id: payment.order_id,
-        amount: payment.amount_inr * 100,
+        /* Already in paise — the unit both our plans table and Razorpay use,
+         * so it is passed straight through with no arithmetic. */
+        amount: payment.amount_minor,
         currency: payment.currency || "INR",
         name: "The Little Door Post",
-        description: `One envelope — ${subscription.cycle}`,
+        description: `${subscription.plan_months} ${
+          subscription.plan_months === 1 ? "month" : "months"
+        }, from ${subscription.cycle}`,
         prefill: {
-          name: values.full_name,
+          name: [values.first_name, values.last_name].filter(Boolean).join(" "),
           email: values.email,
-          contact: values.phone,
+          contact: `${values.phone_cc}${values.phone_number}`,
         },
         notes: { reference: subscription.reference },
         theme: { color: "#b3312f" },
@@ -433,24 +448,45 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           error={fieldErrs.plan_months}
         />
 
-        <Field id="ldp-name" label="Full name" error={fieldErrs.full_name}
-          hint="Exactly as your post office likes it — Iris writes it by hand.">
-          <input className="input" id="ldp-name" name="full_name" type="text" required
-            autoComplete="name" value={values.full_name} onChange={onChange}
-            placeholder="The name on the envelope" />
+        <div style={twoUp}>
+          <Field id="ldp-first" label="First name" error={fieldErrs.first_name}
+            hint="As your post office likes it — Iris writes it by hand.">
+            <input className="input" id="ldp-first" name="first_name" type="text" required
+              autoComplete="given-name" value={values.first_name} onChange={onChange}
+              placeholder="Meera" />
+          </Field>
+          <Field id="ldp-last" label="Last name" error={fieldErrs.last_name}>
+            <input className="input" id="ldp-last" name="last_name" type="text" required
+              autoComplete="family-name" value={values.last_name} onChange={onChange}
+              placeholder="Raghavan" />
+          </Field>
+        </div>
+
+        <Field id="ldp-email" label="Email" error={fieldErrs.email}>
+          <input className="input" id="ldp-email" name="email" type="email" required
+            autoComplete="email" value={values.email} onChange={onChange}
+            placeholder="you@somewhere.com" />
         </Field>
 
-        <div style={twoUp}>
-          <Field id="ldp-email" label="Email" error={fieldErrs.email}>
-            <input className="input" id="ldp-email" name="email" type="email" required
-              autoComplete="email" value={values.email} onChange={onChange}
-              placeholder="you@somewhere.com" />
-          </Field>
-          <Field id="ldp-phone" label="Phone" error={fieldErrs.phone}>
-            <input className="input" id="ldp-phone" name="phone" type="tel" required
-              autoComplete="tel" value={values.phone} onChange={onChange}
+        <div className="field">
+          <label htmlFor="ldp-phone">Phone</label>
+          {/* Two inputs, one field: the code is a short fixed thing and the
+            * number is the part that identifies somebody, so they are stored
+            * and compared separately. */}
+          <div style={css("display:grid;grid-template-columns:92px 1fr;gap:var(--space-2);margin-top:2px")}>
+            <input className="input" name="phone_cc" type="text" required
+              aria-label="Country code" value={values.phone_cc} onChange={onChange}
+              placeholder="+91" />
+            <input className="input" id="ldp-phone" name="phone_number" type="tel" required
+              inputMode="numeric" autoComplete="tel-national"
+              value={values.phone_number} onChange={onChange}
               placeholder="For delivery only" />
-          </Field>
+          </div>
+          {(fieldErrs.phone_cc || fieldErrs.phone_number) && (
+            <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>
+              {fieldErrs.phone_cc || fieldErrs.phone_number}
+            </div>
+          )}
         </div>
 
         <Field id="ldp-insta" label="Instagram" error={fieldErrs.instagram}
@@ -548,6 +584,36 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             value={values.interests_note} onChange={onChange}
             placeholder="A place you love, a story you want, a person to write to" />
         </Field>
+
+        <hr className="hr" style={css("margin:var(--space-2) 0")} />
+
+        <Field id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}
+          hint="For readers who were here in September — it works from the number you signed up with.">
+          <input className="input" id="ldp-code" name="promo_code" type="text"
+            value={values.promo_code}
+            onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
+            placeholder="FOUNDING15" style={css("letter-spacing:.06em")} />
+        </Field>
+
+        <div className="field">
+          <label className="radio" style={css("cursor:pointer")}>
+            <input type="checkbox" checked={values.is_gift}
+              onChange={(e) => set("is_gift", e.target.checked)}
+              style={css("position:static;opacity:1;width:auto;height:auto;pointer-events:auto;accent-color:var(--color-accent)")} />
+            <span style={css("font-size:14px")}>This is a gift for somebody else</span>
+          </label>
+          {values.is_gift && (
+            <div style={css("margin-top:var(--space-3)")}>
+              <Field id="ldp-gift" label="A line to go in with it"
+                error={fieldErrs.gift_message}
+                hint="Iris copies it onto a card and tucks it into the first envelope.">
+                <textarea className="input" id="ldp-gift" name="gift_message" rows={3}
+                  maxLength={600} required value={values.gift_message} onChange={onChange}
+                  placeholder="For Ammu, who reads everything twice — happy birthday." />
+              </Field>
+            </div>
+          )}
+        </div>
 
         <Notice>{formError}</Notice>
 
