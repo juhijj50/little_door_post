@@ -160,6 +160,15 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   const [subscription, setSubscription] = useState(null);
   const [payment, setPayment] = useState(null);
 
+  /* Consent to the terms, given at the moment of paying.
+   *
+   * Starts false and is never pre-ticked: the Consumer Protection (E-Commerce)
+   * Rules, 2020 require consent to a purchase to be an explicit affirmative
+   * act, and specifically not "automatic means such as pre-ticked checkboxes".
+   * It gates the pay button rather than the details form, because this is the
+   * step where money actually moves. */
+  const [agreed, setAgreed] = useState(false);
+
   useEffect(() => {
     let live = true;
     getConfig()
@@ -206,6 +215,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     setFormError("");
     setSubscription(null);
     setPayment(null);
+    setAgreed(false);
     onUnsealed?.();
   };
 
@@ -563,6 +573,23 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
 
         <Notice>{formError}</Notice>
 
+        {/* The DPDP Act wants the notice at the point the details are handed
+          * over, not only on a page somewhere else. Nothing is charged by this
+          * button, so it is a notice rather than a consent gate — the tick
+          * that authorises the purchase is on the next step. */}
+        <p
+          style={css(
+            "font-size:12px;line-height:1.65;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 60%, transparent)"
+          )}
+        >
+          We use these details to address and post your envelope, and nothing else. We never see
+          your card or UPI details. See the{" "}
+          <a href="/privacy" target="_blank" rel="noreferrer noopener">
+            Privacy Policy
+          </a>
+          .
+        </p>
+
         <button className="btn btn-primary btn-block" type="submit" disabled={busy}
           style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
           {busy ? "Just a moment…" : "Continue"}
@@ -655,11 +682,58 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             Eight printed pieces every month, posted to your address. Postage is included. Payment
             is handled by Razorpay &mdash; card, UPI, net banking or wallet.
           </p>
+          <p
+            style={css(
+              "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
+            )}
+          >
+            Charged once, now. <strong>Nothing renews by itself</strong> &mdash; there is no
+            standing instruction on your card or UPI, so we cannot charge you again.
+          </p>
         </div>
+
+        {/* The terms have to be readable at the moment of paying, not buried
+          * three clicks away, and the tick has to be the reader's own act. */}
+        <label
+          style={css(
+            "display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;line-height:1.65;padding:var(--space-3) var(--space-3) var(--space-3) var(--space-2)"
+          )}
+        >
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => {
+              setAgreed(e.target.checked);
+              if (e.target.checked) setFormError("");
+            }}
+            style={css("width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-accent)")}
+          />
+          {/* New tab, deliberately. A policy opened in this one would unmount
+            * the form and lose an order that is paid for in the next click. */}
+          <span>
+            I have read and agree to the{" "}
+            <a href="/terms" target="_blank" rel="noreferrer noopener">
+              Terms &amp; Conditions
+            </a>
+            , the{" "}
+            <a href="/refunds" target="_blank" rel="noreferrer noopener">
+              Refunds &amp; Cancellation policy
+            </a>{" "}
+            and the{" "}
+            <a href="/shipping" target="_blank" rel="noreferrer noopener">
+              Shipping &amp; Delivery policy
+            </a>
+            , and to my address being used to post my envelopes as described in the{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer noopener">
+              Privacy Policy
+            </a>
+            .
+          </span>
+        </label>
 
         <Notice>{formError}</Notice>
 
-        <button className="btn btn-primary btn-block" type="button" disabled={busy}
+        <button className="btn btn-primary btn-block" type="button" disabled={busy || !agreed}
           onClick={openCheckout}
           style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
           {busy ? "Opening…" : `Pay ${amount}`}

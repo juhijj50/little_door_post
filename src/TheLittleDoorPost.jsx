@@ -11,6 +11,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { css } from "./css.js";
 import SubscribeForm from "./SubscribeForm.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 const STYLE = `html { scroll-behavior: smooth; }
   body { margin: 0; overflow-x: hidden; }
@@ -199,7 +200,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
           <div style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups are open now</div>
       
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
-            <span>Posted worldwide</span>
+            <span>Posted across India</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
             <span>Eight printed pieces</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
@@ -389,12 +390,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
           </div>
         </section>
       
-        <footer style={css("border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px)")}>
-          <div style={css("width:min(1080px,100%);margin:0 auto;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:baseline;justify-content:space-between")}>
-            <div style={css("font-family:var(--font-heading);font-size:clamp(17px,3vw,21px)")}>The Little Door Post</div>
-            <div style={css("font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)")}>One envelope a month · Posted worldwide</div>
-          </div>
-        </footer>
+        <SiteFooter />
       </div>
     </>
   );
