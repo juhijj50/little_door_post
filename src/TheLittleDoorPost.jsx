@@ -40,7 +40,7 @@ const STYLE = `html { scroll-behavior: smooth; }
 
 const FALLBACKS = ["Your name", "Street address", "City \u00b7 Postcode", "Country"];
 
-/* Exactly what is in the envelope. Six printed pieces, the same six every
+/* Exactly what is in the envelope. Eight printed pieces, the same eight every
  * month \u2014 only the artwork and the writing change. Keep this list and the
  * backend's ENVELOPE_CONTENTS saying the same thing. */
 const ENVELOPE = [
@@ -65,8 +65,19 @@ const ENVELOPE = [
     detail: "A small illustrated print on card, drawn for that month\u2019s story.",
   },
   {
-    title: "An activity or fact sheet",
-    detail: "One printed page \u2014 a puzzle, a recipe, or a page of true facts about the place.",
+    title: "An activity sheet",
+    detail: "One printed page \u2014 a puzzle, a recipe, or something to make.",
+  },
+  {
+    title: "A fact sheet about something lost",
+    detail:
+      "One printed page on what that month\u2019s town has lost \u2014 a tradition nobody keeps, " +
+      "a trade nobody works, a word nobody says, a story nobody tells any more.",
+  },
+  {
+    title: "A stamp of the town",
+    detail:
+      "A printed paper stamp of that month\u2019s place, to paste into your Wanderland Passport.",
   },
 ];
 
@@ -190,7 +201,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
             <span>Posted worldwide</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>Six printed pieces</span>
+            <span>Eight printed pieces</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
             <span>Arrives in 1–3 weeks</span>
           </div>
@@ -279,7 +290,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
             <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 8% cover 26%")}>
               <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>What's in</div>
               <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>The envelope</div>
-              <p style={css("max-width:46ch;margin:clamp(20px,3.4vh,30px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Six printed pieces, the same six every month — only the writing and the artwork change. No mystery items, nothing edible, nothing you have not been shown.</p>
+              <p style={css("max-width:46ch;margin:clamp(20px,3.4vh,30px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Eight printed pieces, the same eight every month — only the writing and the artwork change. No mystery items, nothing edible, nothing you have not been shown.</p>
               <div style={css("width:56px;height:1px;background:#5e7150;margin:clamp(24px,4vh,38px) auto 0")}></div>
             </div>
 

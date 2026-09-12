@@ -652,7 +652,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
             )}
           >
-            Six printed pieces every month, posted to your address. Postage is included. Payment
+            Eight printed pieces every month, posted to your address. Postage is included. Payment
             is handled by Razorpay &mdash; card, UPI, net banking or wallet.
           </p>
         </div>
