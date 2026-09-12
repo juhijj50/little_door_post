@@ -6,12 +6,14 @@
  *    pay     →  Razorpay Checkout
  *    sealed  →  confirmed
  *
- *  Readers outside India are simply told so: no form, no request, no row.
+ *  There is no open/closed state here. The site is only linked from the bio
+ *  while sign-ups are running, so reaching this page at all is the permission.
+ *  That is also why nothing on screen waits for the API: the form is usable the
+ *  instant it renders, and /api/config only fills in the prices when it lands.
  *
- *  Payments are switched on by the backend, not here: /api/config reports
- *  paymentsEnabled, and each sign-up comes back with a payment block whose
- *  `enabled` flag decides between a pay button and a "not live yet" notice.
- *  Until the Razorpay keys are in backend/.env, nothing is ever charged.
+ *  Payments are switched on by the backend, not here: each sign-up comes back
+ *  with a payment block whose `enabled` flag decides between a pay button and a
+ *  "not live yet" notice.
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "./css.js";
@@ -19,7 +21,6 @@ import {
   createSubscription,
   getConfig,
   loadRazorpayCheckout,
-  requestReminder,
   verifyPayment,
 } from "./api.js";
 
@@ -52,40 +53,6 @@ const EMPTY = {
   full_name: "", email: "", phone: "", instagram: "",
   address_line1: "", address_line2: "", landmark: "", city: "", state: "", pincode: "",
   country: "", birthdate: "", interests: [], interests_note: "",
-};
-
-/* Dates are always written in Indian time, whatever the reader's clock says.
- * Left to the browser, a viewer abroad could be told sign-ups open on the 14th
- * when the answer is the 15th everywhere the post actually goes. */
-const IST = "Asia/Kolkata";
-
-const formatDay = (iso) => {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleDateString("en-IN", {
-    timeZone: IST,
-    day: "numeric",
-    month: "long",
-    ...(sameYear ? {} : { year: "numeric" }),
-  });
-};
-
-/* "in 6 days" / "tomorrow", or nothing once the date has passed. */
-const countdown = (iso) => {
-  const days = Math.ceil((new Date(iso) - new Date()) / 86400000);
-  if (Number.isNaN(days) || days < 0) return "";
-  if (days === 0) return "later today";
-  if (days === 1) return "tomorrow";
-  return `in ${days} days`;
-};
-
-/* '2026-10' -> 'October'. Built from a fixed day so no timezone can nudge it
- * into the neighbouring month. */
-const monthName = (cycle) => {
-  const [year, month] = String(cycle || "").split("-").map(Number);
-  if (!year || !month) return "";
-  return new Date(year, month - 1, 15).toLocaleDateString("en-IN", { month: "long" });
 };
 
 /* Defined at module scope so React keeps the input mounted between renders —
@@ -202,14 +169,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
   const [subscription, setSubscription] = useState(null);
   const [payment, setPayment] = useState(null);
 
-  /* The "tell me when it opens" form, shown only while the window is shut. */
-  const [reminderHandle, setReminderHandle] = useState("");
-  const [reminderState, setReminderState] = useState("idle"); // idle | sending | done
-  const [reminderError, setReminderError] = useState("");
-
-  /* Usually already resolved by the time this mounts — main.jsx starts the
-   * same single-flight request at app load, so this joins it rather than
-   * making a second one. */
   useEffect(() => {
     let live = true;
     getConfig()
@@ -251,20 +210,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           : [...v.interests, interest],
     }));
   }, []);
-
-  const askForReminder = async (e) => {
-    e.preventDefault();
-    if (reminderState === "sending") return;
-    setReminderState("sending");
-    setReminderError("");
-    try {
-      await requestReminder({ instagram: reminderHandle.trim() });
-      setReminderState("done");
-    } catch (err) {
-      setReminderError(err.fields?.instagram || err.message);
-      setReminderState("idle");
-    }
-  };
 
   const chooseRegion = (next) => {
     setRegion(next);
@@ -410,118 +355,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
    * never arrives, the form stays — a slow API must not look like a shut door,
    * and a sign-up that gets through is worth more than a tidy message.
    */
-  /* ── still asking ───────────────────────────────────────────────────────
-   *
-   * Whether the window is open is not ours to guess. Falling through to the
-   * form while the answer is in flight is what made a shut month look open on
-   * a cold start: the reader saw a form, filled it in, and only then met a
-   * 409. Better a moment of honest waiting.
-   *
-   * `configFailed` is deliberately not caught here — if the answer never comes
-   * at all, the form is the better bet, since a sign-up that gets through is
-   * worth more than a spinner nobody can pass.
-   */
-  if (!config && !configFailed && stage === "region") {
-    return (
-      <div style={gap}>
-        <div style={panel}>
-          <div
-            style={css(
-              "font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3.4vw,26px);line-height:1.3;color:color-mix(in srgb, var(--color-text) 70%, transparent)"
-            )}
-          >
-            One moment &mdash; Iris is checking the calendar.
-          </div>
-          <p
-            style={css(
-              "margin:var(--space-3) 0 0;font-size:13px;line-height:1.7;color:color-mix(in srgb, var(--color-text) 55%, transparent)"
-            )}
-          >
-            The first visit of the day can take a few seconds while the sign-up desk wakes up.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (config && !config.signupOpen && stage === "region") {
-    return (
-      <div style={gap}>
-        <div style={panel}>
-          <h3 style={heading}>The desk is shut just now.</h3>
-          <hr className="hr" />
-          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            Sign-ups open on <strong>{formatDay(config.opensAt)}</strong>
-            {countdown(config.opensAt) && (
-              <span style={css("color:color-mix(in srgb, var(--color-text) 62%, transparent)")}>
-                {" "}&mdash; {countdown(config.opensAt)}
-              </span>
-            )}
-            . Come back then and the form will be right here.
-          </p>
-          <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-            That window fills the <strong>{monthName(config.cycle)}</strong> envelope, and it
-            stays open until {formatDay(config.closesAt)}.
-          </p>
-        </div>
-
-        {/* Rather than ask them to remember a date, take a handle and nudge
-          * them. One ask is enough — the server keeps the first and quietly
-          * ignores the rest, so tapping twice cannot spam anyone. */}
-        {reminderState === "done" ? (
-          <div style={panel}>
-            <div style={heading}>Noted.</div>
-            <hr className="hr" />
-            <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-              Iris will message <strong>@{reminderHandle.trim().replace(/^@/, "")}</strong> on
-              Instagram when sign-ups open. Nothing else to do.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={askForReminder} style={gap}>
-            <Field
-              id="ldp-remind"
-              label="Want a nudge when it opens?"
-              hint="Your Instagram handle — Iris will send you a message, once."
-              error={reminderError}
-            >
-              <input
-                className="input"
-                id="ldp-remind"
-                type="text"
-                required
-                value={reminderHandle}
-                onChange={(e) => {
-                  setReminderHandle(e.target.value);
-                  setReminderError("");
-                }}
-                placeholder="@yourhandle"
-              />
-            </Field>
-            <button
-              className="btn btn-secondary btn-block"
-              type="submit"
-              disabled={reminderState === "sending"}
-              style={css("margin-top:0")}
-            >
-              {reminderState === "sending" ? "Just a moment…" : "Remind me"}
-            </button>
-          </form>
-        )}
-
-        <p
-          style={css(
-            "margin:0;font-size:13px;line-height:1.7;text-align:center;color:color-mix(in srgb, var(--color-text) 60%, transparent)"
-          )}
-        >
-          Sign-ups run from the 15th of each month to the 5th of the next.
-          <br />
-          Posting outside India is coming soon.
-        </p>
-      </div>
-    );
-  }
-
   /* ── which door? ─────────────────────────────────────────────────────── */
   if (stage === "region") {
     return (

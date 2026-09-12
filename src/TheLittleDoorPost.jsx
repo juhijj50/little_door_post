@@ -7,11 +7,9 @@
  *
  *  Props
  *    envelopeColor  hex — the envelope's paper colour            (default "#5e7150")
- *    The sign-up window comes from the API, which reads it from the database.
  */
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { css } from "./css.js";
-import { getConfig } from "./api.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 
 const STYLE = `html { scroll-behavior: smooth; }
@@ -85,45 +83,7 @@ const shade = (hex, amt) => {
   );
 };
 
-/* The sign-up window, described from whatever /api/config reports.
- *
- * The dates are not computed here any more: they live in the database, one row
- * per month, so a window that has been moved by hand is the one the site
- * describes. Until config arrives — or if it never does — this falls back to
- * the standard rule so the page is never blank. */
-function windowState(config) {
-  if (!config) {
-    return { open: false, text: "Sign-ups open on the 15th of every month." };
-  }
-
-  const now = new Date();
-  const days = (to) => Math.max(1, Math.ceil((new Date(to) - now) / 86400000));
-  const plural = (n) => `${n} day${n === 1 ? "" : "s"}`;
-  /* Named in Indian time, to match the panel below and the post itself. */
-  const day = (iso) =>
-    new Date(iso).toLocaleDateString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      day: "numeric",
-      month: "long",
-    });
-
-  if (config.signupOpen) {
-    return {
-      open: true,
-      text: `Sign-ups are open — they close on ${day(config.closesAt)}, ${plural(days(config.closesAt))} from now.`,
-    };
-  }
-  return {
-    open: false,
-    text: `Sign-ups open on ${day(config.opensAt)} — ${plural(days(config.opensAt))} away.`,
-  };
-}
-
 export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
-  /* Shares the single-flight request main.jsx already started, so reading the
-   * window here costs no extra call. */
-  const [config, setConfig] = useState(null);
-
   const rootRef = useRef(null);
   const headerRef = useRef(null);
   const envWrap = useRef(null);
@@ -132,8 +92,6 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
   const outStreet = useRef(null);
   const outCity = useRef(null);
   const outCountry = useRef(null);
-  const statusTop = useRef(null);
-  const statusText = useRef(null);
 
   /* envelope colour */
   useEffect(() => {
@@ -144,19 +102,6 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
     if (face) face.style.background = envelopeColor;
     if (flap) flap.style.background = shade(envelopeColor, -18);
   }, [envelopeColor]);
-
-  useEffect(() => {
-    let live = true;
-    getConfig().then((c) => live && setConfig(c)).catch(() => {});
-    return () => { live = false; };
-  }, []);
-
-  /* sign-up window copy */
-  useEffect(() => {
-    const w = windowState(config);
-    if (statusText.current) statusText.current.textContent = w.text;
-    if (statusTop.current) statusTop.current.textContent = w.open ? "Sign-ups are open now" : "Sign-ups open the 15th of every month";
-  }, [config]);
 
   /* sticky header shadow + decorations off on small screens */
   useEffect(() => {
@@ -221,7 +166,6 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
           <a data-navlink="1" href="#meet" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>Meet Iris</a>
           <a data-navlink="1" href="#how" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>How it works</a>
           <a data-navlink="1" href="#inside" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>What you get</a>
-          <a data-navlink="1" href="#/the-red-race" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>The letters</a>
           <a className="btn btn-primary" href="#subscribe" style={css("white-space:nowrap")}>Receive a letter</a>
         </header>
       
@@ -241,7 +185,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
             <a className="btn btn-secondary" href="#how" style={css("padding:12px 24px;font-size:15px;white-space:nowrap")}>How it works</a>
           </div>
       
-          <div ref={statusTop} style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups open the 15th of every month</div>
+          <div style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups are open now</div>
       
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
             <span>Posted across India</span>
@@ -281,11 +225,6 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
                 <p style={css("text-align:justify;hyphens:auto;font-size:clamp(15px,1.7vw,17px);line-height:1.85;text-wrap:pretty")}>Some places are strange. Some are soft. Some hum with music at midnight. Some smell of buttered toast.</p>
                 <div style={css("height:1px;background:color-mix(in srgb, #f4f2ec 28%, transparent);margin:var(--space-4) 0")}></div>
                 <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(21px,3.4vw,29px);line-height:1.4;margin:0;color:#f0c579")}>Every month, Iris finds a new door.<br />Every month, she sends a letter home.</p>
-
-                <a href="#/the-red-race" style={css("display:inline-flex;align-items:center;gap:10px;margin-top:var(--space-4);padding:11px 18px;border:1px solid color-mix(in srgb, #f4f2ec 42%, transparent);border-radius:var(--radius-md);font-family:var(--font-heading);font-size:15px;text-decoration:none;color:#f4f2ec;white-space:nowrap")}>
-                  <span style={css("width:7px;height:7px;border-radius:50%;background:#b3312f;flex:none")}></span>
-                  Read her first letter — <em style={css("font-style:italic;color:#f0c579")}>The Red Race</em>
-                </a>
               </div>
               <div style={css("display:flex;justify-content:center;animation-name:ldp-parallax;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:view();animation-range:cover 0% cover 100%")}>
                 <img src="/assets/iris.webp" alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her" style={css("width:min(440px,88vw);filter:drop-shadow(0 22px 38px rgba(20,26,16,.38))")} />
@@ -426,7 +365,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
               <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
                 <div style={css("display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);margin-bottom:var(--space-4)")}>
                   <span style={css("width:7px;height:7px;border-radius:50%;background:var(--color-accent);flex:none")}></span>
-                  <span ref={statusText} style={css("font-size:13px;line-height:1.4")}>Sign-ups open the 15th of every month.</span>
+                  <span style={css("font-size:13px;line-height:1.4")}>Sign-ups are open — send your address and Iris packs it with this month’s post.</span>
                 </div>
       
                 <SubscribeForm
