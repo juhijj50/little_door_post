@@ -24,21 +24,6 @@ import {
   verifyPayment,
 } from "./api.js";
 
-const INTERESTS = [
-  "Folklore & fairy tales",
-  "Food & recipes",
-  "Music",
-  "Books & poetry",
-  "Art & illustration",
-  "Maps & travel",
-  "Plants & gardens",
-  "History",
-  "Animals",
-  "Craft & making",
-  "Puzzles & games",
-  "The sea",
-];
-
 const STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
   "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
@@ -54,7 +39,7 @@ const EMPTY = {
   phone_cc: "+91", phone_number: "", instagram: "",
   promo_code: "", is_gift: false, gift_message: "",
   address_line1: "", address_line2: "", landmark: "", city: "", state: "", pincode: "",
-  country: "", birthdate: "", interests: [], interests_note: "",
+  country: "", birthdate: "", interests_note: "",
 };
 
 /* Defined at module scope so React keeps the input mounted between renders —
@@ -206,17 +191,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
 
   const onChange = useCallback((e) => set(e.target.name, e.target.value), [set]);
 
-  const toggleInterest = useCallback((interest) => {
-    setValues((v) => ({
-      ...v,
-      interests: v.interests.includes(interest)
-        ? v.interests.filter((i) => i !== interest)
-        : v.interests.length >= 12
-          ? v.interests
-          : [...v.interests, interest],
-    }));
-  }, []);
-
   const chooseRegion = (next) => {
     setRegion(next);
     setFormError("");
@@ -250,7 +224,6 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
       gift_message: values.is_gift ? clean(values.gift_message) || null : null,
       instagram: clean(values.instagram) || null,
       birthdate: clean(values.birthdate) || null,
-      interests: values.interests,
       interests_note: clean(values.interests_note) || null,
     };
     if (region === "india") {
@@ -455,8 +428,8 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               autoComplete="given-name" value={values.first_name} onChange={onChange}
               placeholder="Meera" />
           </Field>
-          <Field id="ldp-last" label="Last name" error={fieldErrs.last_name}>
-            <input className="input" id="ldp-last" name="last_name" type="text" required
+          <Field id="ldp-last" label="Last name" optional error={fieldErrs.last_name}>
+            <input className="input" id="ldp-last" name="last_name" type="text"
               autoComplete="family-name" value={values.last_name} onChange={onChange}
               placeholder="Raghavan" />
           </Field>
@@ -544,42 +517,12 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
             max={new Date().toISOString().slice(0, 10)} value={values.birthdate} onChange={onChange} />
         </Field>
 
-        <div className="field">
-          <label>
-            What do you like reading about?
-            <span style={css("opacity:.65;font-style:italic")}> &middot; optional</span>
-          </label>
-          <div style={css("display:flex;flex-wrap:wrap;gap:7px;margin-top:2px")}>
-            {INTERESTS.map((interest) => {
-              const on = values.interests.includes(interest);
-              return (
-                <button
-                  key={interest}
-                  type="button"
-                  onClick={() => toggleInterest(interest)}
-                  aria-pressed={on}
-                  style={css(
-                    "cursor:pointer;font:inherit;font-size:12.5px;line-height:1.3;padding:6px 12px;border-radius:999px;transition:background .2s,border-color .2s;" +
-                      (on
-                        ? "border:1px solid var(--color-accent);background:var(--color-accent-100);color:var(--color-accent-800)"
-                        : "border:1px solid var(--color-divider);background:transparent;color:var(--color-text)")
-                  )}
-                >
-                  {interest}
-                </button>
-              );
-            })}
-          </div>
-          <div
-            style={css(
-              "font-size:11px;line-height:1.5;margin-top:6px;color:color-mix(in srgb, var(--color-text) 52%, transparent)"
-            )}
-          >
-            It helps Iris choose what to write about next.
-          </div>
-        </div>
-
-        <Field id="ldp-note" label="Anything else she should know?" optional error={fieldErrs.interests_note}>
+        {/* Written out rather than picked from a list. A row of tick-boxes only
+          * ever tells Iris which of her own suggestions a reader recognised;
+          * their own words say something she could not have guessed. */}
+        <Field id="ldp-note" label="What do you like reading about?" optional
+          error={fieldErrs.interests_note}
+          hint="It helps Iris choose what to write about next.">
           <textarea className="input" id="ldp-note" name="interests_note" rows={3} maxLength={600}
             value={values.interests_note} onChange={onChange}
             placeholder="A place you love, a story you want, a person to write to" />
