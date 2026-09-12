@@ -69,10 +69,10 @@ const ENVELOPE = [
     detail: "One printed page \u2014 a puzzle, a recipe, or something to make.",
   },
   {
-    title: "A fact sheet about something lost",
+    title: "A fact sheet on what inspired the letter",
     detail:
-      "One printed page on what that month\u2019s town has lost \u2014 a tradition nobody keeps, " +
-      "a trade nobody works, a word nobody says, a story nobody tells any more.",
+      "One printed page about the real place, tradition or story behind that month\u2019s " +
+      "letter \u2014 where Iris found it, and what is true about it.",
   },
   {
     title: "A stamp of the town",
