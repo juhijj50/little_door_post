@@ -188,11 +188,11 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
           <div style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups are open now</div>
       
           <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
-            <span>Posted across India</span>
+            <span>Posted worldwide</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
             <span>Six printed pieces</span>
             <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>Arrives in 5–10 working days</span>
+            <span>Arrives in 1–3 weeks</span>
           </div>
       
           <div style={css("position:absolute;left:50%;bottom:clamp(18px,3vh,34px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px")}>
@@ -263,7 +263,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
               </div>
               <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>5</div>
               <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Your envelope arrives in 5–10 working days</p>
+                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Your envelope arrives in 1–3 weeks, depending on where you are</p>
               </div>
               </div>
             </div>
@@ -381,7 +381,7 @@ export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
         <footer style={css("border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px)")}>
           <div style={css("width:min(1080px,100%);margin:0 auto;display:flex;flex-wrap:wrap;gap:16px 32px;align-items:baseline;justify-content:space-between")}>
             <div style={css("font-family:var(--font-heading);font-size:clamp(17px,3vw,21px)")}>The Little Door Post</div>
-            <div style={css("font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)")}>One envelope a month · Posted across India</div>
+            <div style={css("font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)")}>One envelope a month · Posted worldwide</div>
           </div>
         </footer>
       </div>

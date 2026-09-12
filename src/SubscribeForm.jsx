@@ -373,7 +373,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
         >
           <span>Post it outside India</span>
           <span style={css("font-family:var(--font-body);font-size:12px;opacity:.7")}>
-            Coming soon
+            Ask us for the postage
           </span>
         </button>
       </div>
@@ -390,16 +390,17 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     return (
       <div style={gap}>
         <div style={panel}>
-          <h3 style={heading}>Not posting there yet.</h3>
+          <h3 style={heading}>Not on the site yet.</h3>
           <hr className="hr" />
           <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            The Little Door Post ships within India only. Postage and customs for other
-            countries are still being worked out, and until that is settled there is no
-            honest way to promise you an envelope.
+            Iris does post abroad &mdash; what is not settled yet is the postage, which
+            varies far too much by country to put a single price on. So there is nothing
+            here for you to pay, rather than nothing to send.
           </p>
           <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-            <strong>International post is coming soon.</strong> Do follow along on Instagram
-            &mdash; that is where it will be announced the moment Iris can post further afield.
+            <strong>Write to us on Instagram</strong> and Iris will work out the postage to
+            where you are. That is also where it will be announced once the price for your
+            part of the world is settled.
           </p>
         </div>
         <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
@@ -614,7 +615,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
                 "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 65%, transparent)"
               )}
             >
-              When it opens, your subscription costs {amount}, including delivery anywhere in India.
+              When it opens, your subscription costs {amount}, postage included.
             </p>
           </div>
           <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
@@ -651,7 +652,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
             )}
           >
-            Six printed pieces every month, posted to your address. Delivery within India is included. Payment
+            Six printed pieces every month, posted to your address. Postage is included. Payment
             is handled by Razorpay &mdash; card, UPI, net banking or wallet.
           </p>
         </div>
@@ -694,7 +695,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
         </p>
       )}
       <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-        It arrives in 5&ndash;10 working days.
+        It arrives in 1&ndash;3 weeks, depending on where you are.
       </p>
       <button className="btn btn-secondary" type="button" onClick={startOver}
         style={css("margin-top:var(--space-4)")}>
