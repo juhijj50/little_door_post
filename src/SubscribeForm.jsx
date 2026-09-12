@@ -589,10 +589,12 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
 
         <Field id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}
           hint="For readers who were here in September — it works from the number you signed up with.">
+          {/* No placeholder: a code in grey text is a code being handed out.
+            * The people who have one already know what it says. */}
           <input className="input" id="ldp-code" name="promo_code" type="text"
             value={values.promo_code}
             onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
-            placeholder="FOUNDING15" style={css("letter-spacing:.06em")} />
+            style={css("letter-spacing:.06em")} />
         </Field>
 
         <div className="field">
