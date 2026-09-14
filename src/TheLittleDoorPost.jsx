@@ -1,397 +1,476 @@
-/*  The Little Door Post — the landing page.
- *  Needs styles.css (the Classical design-system stylesheet) imported once — see main.jsx —
- *  and the four illustrations served from /assets/ (they live in public/assets here).
+/*  The landing page.
  *
- *  The sign-up flow lives in SubscribeForm.jsx; this file owns the envelope
- *  illustration beside it and keeps it addressed as the reader types.
+ *  Six sections, in the order a reader meets them:
  *
- *  Props
- *    envelopeColor  hex — the envelope's paper colour            (default "#5e7150")
+ *    hero      →  the wordmark over the forest, and what arrives
+ *    meet      →  who Iris is, and a way into her first letter
+ *    inside    →  the nine printed pieces, named
+ *    gallery   →  ten photographs of real post going out
+ *    folk      →  who wrote this month's second letter
+ *    subscribe →  SubscribeForm, which owns the whole sign-up
+ *
+ *  Styling is inline through css() for the same reason as the rest of the app:
+ *  the tokens live in styles.css / brand-tokens.css, and everything here reads
+ *  from them rather than restating colours.
  */
-import React, { useCallback, useEffect, useRef } from "react";
+import React from "react";
 import { css } from "./css.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+import GlobalWaitlist from "./GlobalWaitlist.jsx";
 
-const STYLE = `html { scroll-behavior: smooth; }
-  body { margin: 0; overflow-x: hidden; }
-  a { color: var(--color-accent-700); text-decoration-thickness: 1px; }
-  a:hover { color: var(--color-accent-600); }
-  @keyframes ldp-rise { from { opacity: 0; transform: translateY(30px) } to { opacity: 1; transform: none } }
-  @keyframes ldp-fade { from { opacity: 0 } to { opacity: 1 } }
-  @keyframes ldp-left { from { opacity: 0; transform: translateX(-26px) } to { opacity: 1; transform: none } }
-  @keyframes ldp-hero { from { opacity: 0; transform: translateY(22px) scale(.965) } to { opacity: 1; transform: none } }
-  @keyframes ldp-bloom { from { opacity: .28; transform: scale(.88) } to { opacity: .7; transform: scale(1.1) } }
-  @keyframes ldp-drift { from { transform: translateY(10px) rotate(-6deg) } to { transform: translateY(-20px) rotate(4deg) } }
-  @keyframes ldp-cue { 0%,100% { transform: scaleY(.25); opacity: .3 } 50% { transform: scaleY(1); opacity: .9 } }
-  @keyframes ldp-parallax { from { transform: translateY(52px) } to { transform: translateY(-52px) } }
-  @keyframes ldp-draw { from { transform: scaleY(0) } to { transform: scaleY(1) } }
-  @keyframes ldp-progress { to { transform: scaleX(1) } }
-  @keyframes ldp-stamp { 0% { opacity: 0; transform: rotate(-26deg) scale(2.3) } 55% { opacity: 1 } 100% { opacity: 1; transform: rotate(-8deg) scale(1) } }
-  @keyframes ldp-seal { 0% { opacity: 0; transform: translate(-50%,-50%) rotate(-30deg) scale(2.6) } 60% { opacity: 1 } 100% { opacity: 1; transform: translate(-50%,-50%) rotate(-8deg) scale(1) } }
-  @keyframes ldp-tiltA { from { opacity: 0; transform: translateY(26px) rotate(0deg) } to { opacity: 1; transform: translateY(0) rotate(-2.2deg) } }
-  @keyframes ldp-tiltB { from { opacity: 0; transform: translateY(26px) rotate(0deg) } to { opacity: 1; transform: translateY(0) rotate(1.6deg) } }
-  @keyframes ldp-tiltC { from { opacity: 0; transform: translateY(26px) rotate(0deg) } to { opacity: 1; transform: translateY(0) rotate(-1.2deg) } }
-  @keyframes ldp-tiltD { from { opacity: 0; transform: translateY(26px) rotate(0deg) } to { opacity: 1; transform: translateY(0) rotate(2.4deg) } }
-  @keyframes ldp-twinkle { 0%,100% { opacity: .12; transform: scale(.6) } 50% { opacity: .95; transform: scale(1.2) } }
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .001s !important; animation-delay: 0s !important; transition-duration: .001s !important }
-  }
-  [data-hv="0"]:hover { background:var(--color-accent-100) }`;
-
-const FALLBACKS = ["Your name", "Street address", "City \u00b7 Postcode", "Country"];
-
-/* Exactly what is in the envelope. Eight printed pieces, the same eight every
- * month \u2014 only the artwork and the writing change. Keep this list and the
- * backend's ENVELOPE_CONTENTS saying the same thing. */
+/* Kept in step with `contents` in business.js and ENVELOPE_CONTENTS in
+ * backend/app/routers/subscriptions.py. Nine, not eight: the passport is sent
+ * once, with a first envelope, and is listed because a reader who is paying
+ * for it should be able to read what it is. */
 const ENVELOPE = [
-  {
-    title: "A letter from Iris",
-    detail: "Two printed pages about the place she has wandered into this month.",
-  },
-  {
-    title: "A letter from a side character",
-    detail: "One printed page from somebody she met there, in their own words.",
-  },
-  {
-    title: "A theme sticker",
-    detail: "A die-cut vinyl sticker of that month\u2019s world.",
-  },
-  {
-    title: "A character sticker",
-    detail: "A die-cut vinyl sticker of Iris or one of the folk she meets.",
-  },
-  {
-    title: "An art print",
-    detail: "A small illustrated print on card, drawn for that month\u2019s story.",
-  },
-  {
-    title: "An activity sheet",
-    detail: "One printed page \u2014 a puzzle, a recipe, or something to make.",
-  },
-  {
-    title: "A fact sheet on what inspired the letter",
-    detail:
-      "One printed page about the real place, tradition or story behind that month\u2019s " +
-      "letter \u2014 where Iris found it, and what is true about it.",
-  },
-  {
-    title: "A stamp of the town",
-    detail:
-      "A printed paper stamp of that month\u2019s place, to paste into your Wanderland Passport.",
-  },
+  ["A letter from Iris", "Two printed pages about the place she has wandered into this month."],
+  ["A letter from a side character", "One printed page from somebody she met there, in their own words."],
+  ["A theme sticker", "A die-cut sticker of that month's world."],
+  ["A character sticker", "A die-cut sticker of Iris, or one of the folk she meets."],
+  ["An art print", "A small illustrated print on card, drawn for that month's story."],
+  ["An activity sheet", "One page — a puzzle, a recipe, or something to make."],
+  ["A zine", "A little folded zine of the old traditions of that month's world, with a small keepsake tucked into its fold."],
+  ["A stamp of the town", "A paper stamp of that month's place, to paste into your passport."],
+  ["A Wanderland Passport", "For first-time subscribers. A stapled booklet with a page for every door, and a stamp to paste in each time a letter lands."],
 ];
 
-const shade = (hex, amt) => {
-  const h = String(hex).replace("#", "");
-  const n = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  const v = parseInt(n, 16);
-  if (isNaN(v)) return hex;
+/* Photographs of post that has actually gone out. Two rows of five on a wide
+ * screen, two columns on a phone — the grid below does that without a media
+ * query, and every tile is the same 3:4 so no row goes ragged. */
+const GALLERY = [
+  ["/assets/gallery-white-stack.jpg", "A stack of white envelopes printed with the blue door and the Little Door Post wordmark"],
+  ["/assets/gallery-green-seals.jpg", "Sage-green envelopes with painted door cards and pressed wax seals"],
+  ["/assets/gallery-addressed.jpg", "Green and white envelopes addressed by hand, stamped with strawberries and little doors"],
+  ["/assets/gallery-sunlit-nook.jpg", "The Sunlit Nook edition laid out: letters, a recipe, a to-do list and mushroom and flower stickers"],
+  ["/assets/gallery-lanterns.jpg", "The Land of Lanterns letters, bordered with pumpkins, ghosts and black cats"],
+  ["/assets/gallery-mayor-prints.jpg", "Art prints of the Mayor in his lantern-lit street, fanned out in a stack"],
+  ["/assets/gallery-red-race.jpg", "The Red Race envelope opened out: the letter, sticker sheets, wax seals, a colouring page and thank-you notes"],
+  ["/assets/gallery-butterfly-seal.jpg", "A white envelope closed with a butterfly wax seal, held over a pot of yellow chrysanthemums"],
+  ["/assets/gallery-packing.jpg", "Coloured paper envelopes, handwritten notes, sunflower stickers and sticker books laid out for packing"],
+  ["/assets/gallery-sketchbook.jpg", "A sketchbook open to a drawing of Iris in her yellow cardigan, propped up on a desk"],
+];
+
+/* This month's three. They stand together on one baseline — the heights differ
+ * on purpose, they are different people — and carry nothing but their names:
+ * the letter is where they get to speak. */
+const FOLK = [
+  ["/assets/mayor-folk.png", "Mr. Drumstring, a ghost in a top hat and green coat wearing a Mayor's rosette", "33%", "clamp(168px,27vw,320px)"],
+  ["/assets/witch.png", "Martha, a ghost in a wide hat and ribboned skirts carrying a book and a satchel", "30%", "clamp(180px,29vw,344px)"],
+  ["/assets/moondog.png", "Mistling, a cream-and-blue hound with flowering branches for antlers and a moon charm", "31%", "clamp(150px,24vw,284px)"],
+];
+
+const FOLK_NAMES = ["Mr. Drumstring", "Martha", "Mistling"];
+
+const NAV = [
+  ["#meet", "Meet Iris"],
+  ["#inside", "What's inside"],
+  ["#gallery", "The post, photographed"],
+  ["#folk", "Who you'll meet"],
+  ["/red-race", "Read Door 1"],
+  ["#global", "Outside India"],
+];
+
+/* The ragged lower edge of the hero photograph, cut out of the page colour. */
+const TORN_EDGE =
+  "polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)";
+
+const kicker = css(
+  "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-700)"
+);
+const rule = css("width:26px;height:1px;background:var(--color-accent-500)");
+const h2 = css(
+  "font-family:var(--font-heading);font-weight:600;font-size:clamp(34px,6vw,60px);line-height:1.04;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-accent-800);text-wrap:pretty"
+);
+const lede = css(
+  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
+);
+const tile = css(
+  "margin:0;border-radius:var(--radius-md);overflow:hidden;background:var(--color-neutral-200);box-shadow:var(--shadow-sm)"
+);
+
+export default function TheLittleDoorPost() {
   return (
-    "#" +
-    [(v >> 16) & 255, (v >> 8) & 255, v & 255]
-      .map((x) => Math.max(0, Math.min(255, Math.round(x + amt))).toString(16).padStart(2, "0"))
-      .join("")
-  );
-};
-
-export default function TheLittleDoorPost({ envelopeColor = "#5e7150" }) {
-  const rootRef = useRef(null);
-  const headerRef = useRef(null);
-  const envWrap = useRef(null);
-  const sealRef = useRef(null);
-  const outName = useRef(null);
-  const outStreet = useRef(null);
-  const outCity = useRef(null);
-  const outCountry = useRef(null);
-
-  /* envelope colour */
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root || !envelopeColor) return;
-    const face = root.querySelector('[data-env="face"]');
-    const flap = root.querySelector('[data-env="flap"]');
-    if (face) face.style.background = envelopeColor;
-    if (flap) flap.style.background = shade(envelopeColor, -18);
-  }, [envelopeColor]);
-
-  /* sticky header shadow + decorations off on small screens */
-  useEffect(() => {
-    const onScroll = () => {
-      if (headerRef.current) headerRef.current.style.boxShadow = window.scrollY > 12 ? "var(--shadow-sm)" : "none";
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-    const mq = window.matchMedia("(max-width: 720px)");
-    const apply = () => {
-      const root = rootRef.current;
-      if (!root) return;
-      root.querySelectorAll("[data-deco]").forEach((el) => (el.style.display = mq.matches ? "none" : "block"));
-      root.querySelectorAll("[data-navlink]").forEach((el) => (el.style.display = mq.matches ? "none" : "inline"));
-    };
-    apply();
-    mq.addEventListener?.("change", apply);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      mq.removeEventListener?.("change", apply);
-    };
-  }, []);
-
-  /* The envelope is addressed straight through the DOM rather than through
-   * state \u2014 it repaints on every keystroke, and React does not need to know. */
-  const onAddressChange = useCallback((a) => {
-    const set = (ref, v, fb) => { if (ref.current) ref.current.textContent = (v || "").trim() || fb; };
-    set(outName, a.name, FALLBACKS[0]);
-    set(outStreet, a.street, FALLBACKS[1]);
-    set(outCity, a.cityLine, FALLBACKS[2]);
-    set(outCountry, a.country, FALLBACKS[3]);
-  }, []);
-
-  const onSealed = useCallback(() => {
-    const seal = sealRef.current;
-    if (seal) {
-      seal.style.animation = "none";
-      void seal.offsetWidth; /* forces the restart */
-      seal.style.animation = "ldp-seal .8s cubic-bezier(.2,1.4,.4,1) both";
-    }
-    if (envWrap.current) envWrap.current.style.transform = "translateY(-10px) rotate(-1.5deg)";
-  }, []);
-
-  const onUnsealed = useCallback(() => {
-    if (sealRef.current) { sealRef.current.style.animation = "none"; sealRef.current.style.opacity = "0"; }
-    if (envWrap.current) envWrap.current.style.transform = "none";
-    [outName, outStreet, outCity, outCountry].forEach((r, i) => { if (r.current) r.current.textContent = FALLBACKS[i]; });
-  }, []);
-
-  return (
-    <>
-      <style>{STYLE}</style>
-      <div ref={rootRef} style={css("background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);position:relative")}>
-      
-        <div style={css("position:fixed;top:0;left:0;right:0;height:2px;background:var(--color-accent);transform:scaleX(0);transform-origin:0 50%;z-index:60;animation-name:ldp-progress;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:scroll(root)")}></div>
-      
-        <header ref={headerRef} style={css("position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:clamp(14px,3vw,30px);padding:11px clamp(16px,4vw,44px);background:color-mix(in srgb, var(--color-bg) 92%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--color-divider);transition:box-shadow .4s")}>
-          <a href="#top" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
-            <img src="/assets/logo.webp" alt="" style={css("width:clamp(30px,6vw,38px);height:clamp(30px,6vw,38px);border-radius:50%;object-fit:cover;flex:none")} />
-            <span style={css("font-family:var(--font-heading);font-size:clamp(15px,3.4vw,19px);letter-spacing:.02em;white-space:nowrap")}>The Little Door Post</span>
+    <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:hidden")}>
+      {/* ── header ─────────────────────────────────────────────────────── */}
+      <header
+        style={css(
+          "position:sticky;top:0;z-index:60;background:color-mix(in srgb, var(--color-bg) 92%, transparent);backdrop-filter:blur(9px);border-bottom:1px solid var(--color-neutral-300)"
+        )}
+      >
+        <div
+          style={css(
+            "width:min(1180px,100%);margin:0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px clamp(10px,2vw,22px);padding:8px clamp(14px,4vw,40px)"
+          )}
+        >
+          <a href="/" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
+            <img
+              src="/assets/logo-round.png"
+              alt=""
+              style={css(
+                "width:clamp(36px,8vw,44px);height:clamp(36px,8vw,44px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
+              )}
+            />
+            <span
+              style={css(
+                "font-family:var(--font-heading);font-weight:600;font-size:clamp(16px,3.6vw,20px);line-height:1.1;letter-spacing:.02em;white-space:nowrap"
+              )}
+            >
+              The Little Door Post
+            </span>
           </a>
-          <a data-navlink="1" href="#meet" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>Meet Iris</a>
-          <a data-navlink="1" href="#how" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>How it works</a>
-          <a data-navlink="1" href="#inside" style={css("font-size:14px;text-decoration:none;color:var(--color-text);white-space:nowrap")}>What you get</a>
-          <a className="btn btn-primary" href="#subscribe" style={css("white-space:nowrap")}>Receive a letter</a>
-        </header>
-      
-        <section id="top" style={css("position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 clamp(20px,5vw,40px) clamp(104px,14vh,132px);overflow:hidden;text-align:center")}>
-          <div style={css("align-self:stretch;position:relative;margin:0 calc(-1 * clamp(20px,5vw,40px)) clamp(26px,4.5vh,48px);line-height:0")}>
-            <img src="/assets/forest.webp" alt="A watercolour clearing of mushroom folk, pinecone people and paper ghosts" style={css("width:100%;height:clamp(170px,32svh,380px);object-fit:cover;object-position:50% 62%;animation-name:ldp-fade;animation-duration:1.4s;animation-fill-mode:both")} />
-            <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
-          </div>
-          <div style={css("position:absolute;left:50%;top:56%;width:min(620px,90vw);aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(circle, color-mix(in srgb, var(--color-accent) 22%, transparent) 0%, transparent 62%);animation-name:ldp-bloom;animation-duration:7s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate;pointer-events:none")}></div>
-      
-          <img src="/assets/wordmark.png" alt="The Little Door Post" style={css("position:relative;width:min(600px,88vw);mix-blend-mode:multiply;animation-name:ldp-hero;animation-duration:1.5s;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-fill-mode:both")} />
-      
-          <p style={css("position:relative;max-width:34ch;margin:clamp(4px,1.5vh,16px) 0 0;font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,4.4vw,30px);line-height:1.35;text-wrap:pretty;animation-name:ldp-rise;animation-duration:1.1s;animation-delay:.5s;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-fill-mode:both")}>Every month, Iris finds a new door.<br />Every month, she sends a letter home.</p>
-      
-          <div style={css("position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;margin-top:clamp(20px,3.5vh,34px);animation-name:ldp-rise;animation-duration:1.1s;animation-delay:.75s;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-fill-mode:both")}>
-            <a className="btn btn-primary" href="#subscribe" style={css("padding:12px 24px;font-size:15px;white-space:nowrap")}>Receive a letter</a>
-            <a className="btn btn-secondary" href="#how" style={css("padding:12px 24px;font-size:15px;white-space:nowrap")}>How it works</a>
-          </div>
-      
-          <div style={css("position:relative;margin-top:clamp(16px,2.6vh,26px);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 58%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1s;animation-fill-mode:both")}>Sign-ups are open now</div>
-      
-          <div style={css("position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 18px;margin-top:clamp(14px,2.2vh,22px);font-size:12px;letter-spacing:.06em;color:color-mix(in srgb, var(--color-text) 62%, transparent);animation-name:ldp-fade;animation-duration:1.2s;animation-delay:1.15s;animation-fill-mode:both")}>
-            <span>Posted across India</span>
-            <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>Eight printed pieces</span>
-            <span style={css("width:3px;height:3px;border-radius:50%;background:#5e7150")}></span>
-            <span>Arrives in 1–3 weeks</span>
-          </div>
-      
-          <div style={css("position:absolute;left:50%;bottom:clamp(18px,3vh,34px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px")}>
-            <span style={css("font-size:11px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;color:color-mix(in srgb, var(--color-text) 45%, transparent)")}>read on</span>
-            <span style={css("width:1px;height:44px;background:var(--color-accent);transform-origin:top;animation-name:ldp-cue;animation-duration:2.4s;animation-timing-function:ease-in-out;animation-iteration-count:infinite")}></span>
-          </div>
-        </section>
-      
-        <section id="meet" style={css("position:relative;padding:clamp(74px,11vh,134px) clamp(20px,5vw,40px) clamp(80px,12vh,142px);overflow:hidden;background:#4e5f43;color:#f4f2ec")}>
-          <div style={css("position:absolute;left:68%;top:52%;width:min(820px,120vw);aspect-ratio:1;transform:translate(-50%,-50%);background:radial-gradient(circle, color-mix(in srgb, #f0c579 20%, transparent) 0%, transparent 66%);animation-name:ldp-bloom;animation-duration:9s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:52%;top:24%;width:7px;height:7px;border-radius:50%;background:#f0c579;animation-name:ldp-twinkle;animation-duration:3.4s;animation-delay:0s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:61%;top:15%;width:5px;height:5px;border-radius:50%;background:#f4f2ec;animation-name:ldp-twinkle;animation-duration:4.2s;animation-delay:-1.1s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:88%;top:31%;width:6px;height:6px;border-radius:50%;background:#f0c579;animation-name:ldp-twinkle;animation-duration:3.8s;animation-delay:-2.3s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:74%;top:70%;width:5px;height:5px;border-radius:50%;background:#f4f2ec;animation-name:ldp-twinkle;animation-duration:4.6s;animation-delay:-0.6s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:93%;top:59%;width:7px;height:7px;border-radius:50%;background:#f0c579;animation-name:ldp-twinkle;animation-duration:5.2s;animation-delay:-3s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div data-deco="1" style={css("position:absolute;left:57%;top:82%;width:6px;height:6px;border-radius:50%;background:#f4f2ec;animation-name:ldp-twinkle;animation-duration:4s;animation-delay:-1.8s;animation-timing-function:ease-in-out;animation-iteration-count:infinite;pointer-events:none")}></div>
-          <div style={css("position:absolute;left:0;right:0;top:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);transform:scaleY(-1);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
-          <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
-          <div style={css("position:relative;width:min(1080px,100%);margin:0 auto")}>
-            <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 8% cover 26%")}>
-              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>Meet</div>
-              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(46px,10.5vw,92px);line-height:1;color:#f0c579;margin-top:-.08em")}>Iris</div>
-              <div style={css("width:56px;height:1px;background:color-mix(in srgb, #f4f2ec 45%, transparent);margin:clamp(22px,3.6vh,34px) auto 0")}></div>
-            </div>
-      
-            <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(24px,4.5vw,58px);align-items:center;margin-top:clamp(28px,5vh,52px)")}>
-              <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 10% cover 30%")}>
-                <p style={css("text-align:justify;hyphens:auto;font-size:clamp(15px,1.7vw,17px);line-height:1.85;text-wrap:pretty")}>Somewhere between worlds, there&rsquo;s a girl with red curls and a suitcase full of paper.</p>
-                <p style={css("text-align:justify;hyphens:auto;font-size:clamp(15px,1.7vw,17px);line-height:1.85;text-wrap:pretty")}>Her name is Iris. She travels through doors, one to the next, writing letters to strangers about the towns she wanders into.</p>
-                <p style={css("text-align:justify;hyphens:auto;font-size:clamp(15px,1.7vw,17px);line-height:1.85;text-wrap:pretty")}>Some places are strange. Some are soft. Some hum with music at midnight. Some smell of buttered toast.</p>
-                <div style={css("height:1px;background:color-mix(in srgb, #f4f2ec 28%, transparent);margin:var(--space-4) 0")}></div>
-                <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(21px,3.4vw,29px);line-height:1.4;margin:0;color:#f0c579")}>Every month, Iris finds a new door.<br />Every month, she sends a letter home.</p>
-              </div>
-              <div style={css("display:flex;justify-content:center;animation-name:ldp-parallax;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:view();animation-range:cover 0% cover 100%")}>
-                <img src="/assets/iris.webp" alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her" style={css("width:min(440px,88vw);filter:drop-shadow(0 22px 38px rgba(20,26,16,.38))")} />
-              </div>
-            </div>
-          </div>
-        </section>
-      
-        <section id="how" style={css("position:relative;padding:clamp(64px,11vh,130px) clamp(20px,5vw,40px);border-top:1px solid var(--color-divider)")}>
-          <div style={css("width:min(880px,100%);margin:0 auto")}>
-            <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 8% cover 26%")}>
-              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>How</div>
-              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(38px,8.5vw,76px);line-height:1;color:#b3312f;margin-top:-.06em")}>Does it work?</div>
-            </div>
-      
-            <p style={css("text-align:center;font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3.4vw,28px);line-height:1.45;margin:clamp(28px,5vh,44px) auto clamp(34px,6vh,56px);max-width:26ch;animation-name:ldp-fade;animation-fill-mode:both;animation-timeline:view();animation-range:entry 14% cover 34%")}>Every month, Iris sends one envelope to her readers.</p>
-      
-            <div style={css("position:relative;max-width:720px;margin:0 auto")}>
-              <div style={css("position:absolute;left:clamp(22px,3.7vw,29px);top:14px;bottom:26px;width:1px;background:#5e7150;transform-origin:top;animation-name:ldp-draw;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:view();animation-range:entry 20% cover 74%")}></div>
-              <div style={css("display:grid;grid-template-columns:clamp(44px,7.4vw,58px) 1fr;gap:0 clamp(16px,3vw,26px);align-items:center")}>
-              <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 32%")}>1</div>
-              <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 32%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Sign-ups open the 15th of every month</p>
-              </div>
-              <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 16% cover 36%")}>2</div>
-              <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 16% cover 36%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>They close on the 5th of the following month</p>
-              </div>
-              <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 20% cover 40%")}>3</div>
-              <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 20% cover 40%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>The link lives in our bio during that window</p>
-              </div>
-              <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 24% cover 44%")}>4</div>
-              <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);border-bottom:1px solid var(--color-divider);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 24% cover 44%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Then Iris packs her suitcase, seals the envelopes, and sends them out</p>
-              </div>
-              <div style={css("position:relative;z-index:1;display:grid;place-items:center;width:clamp(44px,7.4vw,58px);height:clamp(44px,7.4vw,58px);border:1px solid #5e7150;border-radius:50%;background:var(--color-bg);font-family:var(--font-heading);font-size:clamp(19px,3.2vw,25px);line-height:1;color:#b3312f;font-feature-settings:'tnum';animation-name:ldp-fade;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>5</div>
-              <div style={css("padding:clamp(12px,2vh,18px) 0 clamp(22px,3.6vh,32px);animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 28% cover 48%")}>
-                <p style={css("margin:0;font-size:clamp(16px,2vw,19px);line-height:1.6;text-wrap:pretty")}>Your envelope arrives in 1–3 weeks, depending on where you are</p>
-              </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      
-        <section id="inside" style={css("position:relative;padding:clamp(76px,12vh,140px) clamp(20px,5vw,40px) clamp(82px,13vh,150px);overflow:hidden")}>
-          <img src="/assets/envelope-folk.webp" alt="Envelope folk of the wood, each carrying a sealed letter" style={css("position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 58%")} />
-          <div style={css("position:absolute;inset:0;background:color-mix(in srgb, var(--color-bg) 74%, transparent)")}></div>
-          <div style={css("position:absolute;left:0;right:0;top:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);transform:scaleY(-1);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
-          <div style={css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg);clip-path:polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)")}></div>
-          <div style={css("position:relative;width:min(1080px,100%);margin:0 auto")}>
-            <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 8% cover 26%")}>
-              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>What's in</div>
-              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>The envelope</div>
-              <p style={css("max-width:46ch;margin:clamp(20px,3.4vh,30px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Eight printed pieces, the same eight every month — only the writing and the artwork change. No mystery items, nothing edible, nothing you have not been shown.</p>
-              <div style={css("width:56px;height:1px;background:#5e7150;margin:clamp(24px,4vh,38px) auto 0")}></div>
-            </div>
+          <a className="btn btn-primary" href="#subscribe" style={css("padding:10px 20px;font-size:14px;white-space:nowrap;order:2")}>
+            Receive a letter
+          </a>
+          {/* Its own row, so the brand and the one action never have to compete
+            * for width on a phone. */}
+          <nav style={css("order:3;flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 18px;padding:2px 0 4px")}>
+            {NAV.map(([href, label]) => (
+              <a key={href} href={href} style={css("font-size:14px;text-decoration:none;color:var(--color-neutral-800);white-space:nowrap")}>
+                {label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </header>
 
-            <div style={css("position:relative;max-width:660px;margin:clamp(38px,6.5vh,66px) auto 0;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 6% cover 28%")}>
-              <div style={css("position:absolute;top:-14px;left:50%;transform:translateX(-50%) rotate(-1.6deg);width:clamp(100px,24%,144px);height:30px;background:color-mix(in srgb, var(--color-accent-300) 60%, transparent);border-left:1px solid color-mix(in srgb, var(--color-accent-500) 28%, transparent);border-right:1px solid color-mix(in srgb, var(--color-accent-500) 28%, transparent);box-shadow:var(--shadow-sm);z-index:2")}></div>
-              <div style={css("position:relative;padding:clamp(28px,4.5vw,44px) clamp(18px,3.4vw,34px);background-color:var(--color-neutral-100);background-image:repeating-linear-gradient(to bottom, transparent 0 33px, color-mix(in srgb, var(--color-accent) 15%, transparent) 33px 34px);border:1px solid var(--color-divider);border-radius:var(--radius-md);box-shadow:var(--shadow-md);transform:rotate(-.4deg)")}>
-                <div style={css("display:flex;flex-direction:column;gap:clamp(10px,1.6vw,14px)")}>
-                  {ENVELOPE.map((item, i) => (
-                    <div key={item.title} style={css(`display:flex;align-items:flex-start;gap:14px;padding:13px clamp(14px,2.4vw,20px);background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-md);transition:background .35s;animation-name:ldp-left;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry ${10 + i * 3}% cover ${30 + i * 3}%`)} data-hv="0">
-                      <span style={css("flex:none;margin-top:2px;width:22px;height:22px;border:1px solid var(--color-accent);border-radius:var(--radius-sm);display:grid;place-items:center;color:var(--color-accent-700);font-size:13px;line-height:1")}>✓</span>
-                      <span style={css("font-size:clamp(15px,1.9vw,17px);line-height:1.5;text-wrap:pretty")}>
-                        <strong style={css("font-weight:600")}>{item.title}</strong>
-                        <span style={css("display:block;font-size:.86em;line-height:1.55;margin-top:3px;color:color-mix(in srgb, var(--color-text) 66%, transparent)")}>{item.detail}</span>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      {/* ── hero ───────────────────────────────────────────────────────── */}
+      <section
+        id="top"
+        style={css(
+          "position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 clamp(20px,5vw,40px) clamp(52px,9vh,92px);overflow:hidden"
+        )}
+      >
+        <div style={css("align-self:stretch;position:relative;margin:0 calc(-1 * clamp(20px,5vw,40px)) clamp(22px,4vh,44px);line-height:0")}>
+          <img
+            src="/assets/forest.webp"
+            alt="A watercolour clearing of mushroom folk, pinecone people and paper ghosts"
+            style={css(
+              "width:100%;height:clamp(190px,34svh,400px);object-fit:cover;object-position:50% 62%;animation:ldp-fade 1.4s both"
+            )}
+          />
+          <div
+            style={{
+              ...css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg)"),
+              clipPath: TORN_EDGE,
+            }}
+          />
+        </div>
+
+        <div
+          style={css(
+            "position:absolute;left:50%;top:58%;width:min(680px,92vw);aspect-ratio:1;background:radial-gradient(circle, rgba(134,149,92,.20) 0%, transparent 62%);animation:ldp-bloom 7s ease-in-out infinite alternate;pointer-events:none"
+          )}
+        />
+        <div
+          style={css(
+            "position:absolute;left:16%;top:46%;width:7px;height:7px;border-radius:50%;background:var(--color-accent-2-400);animation:ldp-twinkle 3.6s ease-in-out infinite;pointer-events:none"
+          )}
+        />
+        <div
+          style={css(
+            "position:absolute;right:14%;top:54%;width:6px;height:6px;border-radius:50%;background:#d98f8a;animation:ldp-twinkle 4.4s -1.4s ease-in-out infinite;pointer-events:none"
+          )}
+        />
+
+        <img
+          src="/assets/wordmark.png"
+          alt="The Little Door Post"
+          style={css("position:relative;width:min(580px,86vw);mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
+        />
+
+        <p
+          style={css(
+            "position:relative;max-width:32ch;margin:clamp(6px,1.6vh,16px) 0 0;font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,4.6vw,32px);line-height:1.34;color:var(--color-accent-800);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
+          )}
+        >
+          Every month, Iris finds a new door.
+          <br />
+          Every month, she sends a letter home.
+        </p>
+
+        <p
+          style={css(
+            "position:relative;max-width:46ch;margin:clamp(14px,2.4vh,22px) 0 0;font-size:clamp(15px,2vw,17px);line-height:1.72;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
+          )}
+        >
+          Eight printed pieces — letters, a zine, stickers, an art print — sealed into one envelope
+          and posted to your letterbox. Anywhere in India.
+        </p>
+
+        <div
+          style={css(
+            "position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:clamp(20px,3.4vh,32px);animation:ldp-rise 1.1s .75s cubic-bezier(.2,.7,.2,1) both"
+          )}
+        >
+          <a className="btn btn-primary" href="#subscribe" style={css("padding:13px 26px;font-size:15px")}>
+            Receive a letter
+          </a>
+          <a className="btn btn-secondary" href="#inside" style={css("padding:13px 26px;font-size:15px")}>
+            See what&rsquo;s inside
+          </a>
+        </div>
+
+        <div
+          style={css(
+            "position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;margin-top:clamp(20px,3vh,28px);font-size:13px;letter-spacing:.02em;color:var(--color-neutral-600)"
+          )}
+        >
+          <span>Addressed by hand</span>
+          <span style={css("width:5px;height:5px;border-radius:50%;background:#d98f8a")} />
+          <span>Printed on real paper</span>
+          <span style={css("width:5px;height:5px;border-radius:50%;background:var(--color-accent-2-400)")} />
+          <span>Within India, in about a week</span>
+        </div>
+      </section>
+
+      {/* ── meet Iris ──────────────────────────────────────────────────── */}
+      <section
+        id="meet"
+        style={css(
+          "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background:var(--color-accent-800);color:var(--color-neutral-200);overflow:hidden"
+        )}
+      >
+        <div
+          style={css(
+            "position:absolute;left:66%;top:44%;width:min(760px,120vw);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle, rgba(196,205,159,.20) 0%, transparent 66%);pointer-events:none"
+          )}
+        />
+        <div
+          style={css(
+            "position:relative;width:min(1120px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:clamp(26px,5vw,60px);align-items:center"
+          )}
+        >
+          <div>
+            <div style={css("display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-300)")}>
+              <span style={css("width:26px;height:1px;background:var(--color-accent-300)")} />
+              The letter-writer
             </div>
-      
-            <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:clamp(24px,4vw,52px);align-items:center;margin-top:clamp(44px,7vh,86px);padding-top:clamp(34px,5vh,54px);border-top:1px solid var(--color-divider)")}>
-              <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
-                <p style={css("font-size:clamp(16px,2vw,19px);line-height:1.8;text-wrap:pretty;margin-bottom:var(--space-3)")}>First-time readers also get a printed <em style={css("font-family:var(--font-heading);font-style:italic;font-size:1.22em;color:#b3312f")}>Wanderland Passport</em> — a small stapled booklet with a page for each month, and a paper stamp to paste in every time an envelope arrives.</p>
-                <p style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,3vw,26px);line-height:1.4;margin:0")}>One booklet, twelve months, twelve stamps.</p>
+            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-neutral-200)")}>
+              Meet Iris
+            </h2>
+            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:clamp(16px,2.6vh,24px) 0 0;text-wrap:pretty")}>
+              Somewhere between worlds there is a girl with red curls and a suitcase full of paper.
+            </p>
+            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
+              She travels through doors, one to the next, and writes to strangers about the towns she
+              wanders into. Some are strange. Some are soft. Some hum with music at midnight. Some
+              smell of buttered toast.
+            </p>
+            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
+              Whatever she finds, she posts home: written out, printed, folded and sealed by one pair
+              of hands.
+            </p>
+            <p
+              style={css(
+                "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);color:var(--color-accent-300);text-wrap:pretty"
+              )}
+            >
+              She has never once run out of doors.
+            </p>
+            <a
+              className="btn btn-primary"
+              href="/red-race"
+              style={css(
+                "margin-top:clamp(20px,3vh,28px);padding:12px 22px;font-size:15px;background:var(--color-accent-300);border-color:var(--color-accent-300);color:var(--color-accent-900)"
+              )}
+            >
+              Read her first letter
+            </a>
+          </div>
+          <div style={css("display:flex;justify-content:center")}>
+            <img
+              src="/assets/iris.webp"
+              alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her"
+              style={css("width:min(420px,84%);filter:drop-shadow(0 24px 40px rgba(20,26,16,.42));animation:ldp-sway 9s ease-in-out infinite alternate")}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── what's inside ──────────────────────────────────────────────── */}
+      <section id="inside" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
+        <div style={css("width:min(1120px,100%);margin:0 auto")}>
+          <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(24px,4.5vw,56px);align-items:center")}>
+            <div>
+              <div style={kicker}>
+                <span style={rule} />
+                Nine pieces
               </div>
-              <div style={css("display:flex;justify-content:center")}>
-                <div style={css("position:relative;width:min(230px,62vw);aspect-ratio:1;display:grid;place-items:center")}>
-                  <div style={css("position:absolute;inset:0;border:1px solid var(--color-divider);border-radius:50%")}></div>
-                  <div style={css("position:absolute;inset:12%;border:1px solid var(--color-divider);border-radius:50%")}></div>
-                  <div style={css("position:relative;display:grid;place-items:center;gap:4px;text-align:center;color:var(--color-accent-700);animation-name:ldp-stamp;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,1.5,.5,1);animation-timeline:view();animation-range:entry 30% entry 90%")}>
-                    <div style={css("width:min(150px,44vw);aspect-ratio:1;border:2px solid #b3312f;border-radius:50%;display:grid;place-items:center;padding:12%")}>
-                      <div>
-                        <div style={css("font-size:10px;letter-spacing:.18em;text-transform:uppercase")}>Wanderland</div>
-                        <div style={css("font-family:var(--font-heading);font-style:italic;font-size:clamp(20px,5.4vw,28px);line-height:1.1;margin:2px 0")}>Passport</div>
-                        <div style={css("font-size:10px;letter-spacing:.18em;text-transform:uppercase;font-feature-settings:'tnum'")}>No. 001</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <h2 style={h2}>What&rsquo;s in the envelope</h2>
+              <p style={{ ...lede, maxWidth: "46ch" }}>
+                The same eight pieces every month — only the writing and the artwork change — and a
+                Wanderland Passport in your very first envelope. No mystery items, nothing edible,
+                nothing you haven&rsquo;t been shown.
+              </p>
+            </div>
+            <div style={css("display:flex;justify-content:center")}>
+              <img
+                src="/assets/envelope-white.png"
+                alt="A white envelope with a painted blue door, wildflowers, butterflies and a pearl wax seal"
+                style={css("width:min(470px,92%);filter:drop-shadow(0 20px 32px rgba(58,49,40,.18));animation:ldp-float 9s ease-in-out infinite alternate")}
+              />
             </div>
           </div>
-        </section>
-      
-        <section id="subscribe" style={css("position:relative;padding:clamp(64px,11vh,130px) clamp(20px,5vw,40px) clamp(48px,8vh,90px);border-top:1px solid var(--color-divider);background:color-mix(in srgb, var(--color-surface) 55%, var(--color-bg))")}>
-          <div style={css("width:min(1080px,100%);margin:0 auto")}>
-            <div style={css("text-align:center;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 6% cover 24%")}>
-              <div style={css("font-family:var(--font-heading);font-weight:400;text-transform:uppercase;letter-spacing:.07em;font-size:clamp(38px,8.5vw,74px);line-height:1")}>Send me</div>
-              <div style={css("font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(44px,9.5vw,86px);line-height:1;color:#b3312f;margin-top:-.06em")}>A letter</div>
-              <p style={css("max-width:44ch;margin:clamp(22px,4vh,34px) auto 0;font-size:clamp(15px,1.8vw,17px);line-height:1.75;text-wrap:pretty")}>Tell Iris where to post it. She writes the address by hand, so please give it exactly as your post office likes it.</p>
-            </div>
-      
-            <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:clamp(34px,5vw,64px);align-items:start;margin-top:clamp(38px,6vh,68px)")}>
-      
-              <div ref={envWrap} style={css("position:relative;max-width:480px;margin:0 auto;width:100%;transition:transform 1s cubic-bezier(.2,.7,.2,1), opacity 1s;animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 10% cover 32%")}>
-                <div data-env="face" style={css("position:relative;aspect-ratio:1.58/1;background:#5e7150;border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);overflow:hidden")}>
-                  <div data-env="flap" style={css("position:absolute;top:0;left:0;right:0;height:57%;background:#526344;clip-path:polygon(0 0,100% 0,50% 100%)")}></div>
-                  <div style={css("position:absolute;inset:0;background:linear-gradient(155deg, rgba(255,255,255,.10), rgba(0,0,0,.14))")}></div>
-      
-                  <div style={css("position:absolute;right:6%;top:6%;width:clamp(54px,15%,80px);aspect-ratio:.78;background:var(--color-neutral-100);border:1px solid var(--color-divider);display:grid;place-items:center;text-align:center;padding:5px;transform:rotate(2deg);box-shadow:var(--shadow-sm)")}>
-                    <div>
-                      <div style={css("font-family:var(--font-heading);font-style:italic;font-size:11px;line-height:1.15;color:var(--color-accent-700)")}>Little Door</div>
-                      <div style={css("font-size:8px;letter-spacing:.12em;text-transform:uppercase;margin-top:2px;color:color-mix(in srgb, var(--color-text) 55%, transparent)")}>Post</div>
-                    </div>
-                  </div>
-      
-                  <div style={css("position:absolute;left:7%;bottom:9%;width:58%;max-width:268px;background:var(--color-neutral-100);border:1px solid var(--color-divider);padding:10px 13px 11px;transform:rotate(-1.2deg);box-shadow:var(--shadow-sm)")}>
-                    <div style={css("font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 50%, transparent);margin-bottom:5px")}>To</div>
-                    <div ref={outName} style={css("font-family:var(--font-heading);font-size:clamp(15px,3.2vw,19px);line-height:1.25;color:var(--color-text);overflow-wrap:anywhere")}>Your name</div>
-                    <div ref={outStreet} style={css("font-size:clamp(11px,2.3vw,13px);line-height:1.5;margin-top:3px;color:color-mix(in srgb, var(--color-text) 72%, transparent);overflow-wrap:anywhere")}>Street address</div>
-                    <div ref={outCity} style={css("font-size:clamp(11px,2.3vw,13px);line-height:1.5;color:color-mix(in srgb, var(--color-text) 72%, transparent);overflow-wrap:anywhere")}>City · Postcode</div>
-                    <div ref={outCountry} style={css("font-size:clamp(11px,2.3vw,13px);line-height:1.5;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 72%, transparent);overflow-wrap:anywhere")}>Country</div>
-                  </div>
+
+          <div
+            style={css(
+              "display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(12px,1.8vw,18px);margin-top:clamp(30px,5vh,54px)"
+            )}
+          >
+            {ENVELOPE.map(([title, detail], i) => (
+              <div
+                key={title}
+                style={css(
+                  "display:flex;flex-direction:column;gap:9px;padding:clamp(16px,2.4vw,22px);border-radius:var(--radius-md);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-sm)"
+                )}
+              >
+                <div style={css("display:flex;align-items:center;gap:10px")}>
+                  <span
+                    style={css(
+                      "flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--color-accent-200);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:14px;line-height:1"
+                    )}
+                  >
+                    {i + 1}
+                  </span>
+                  <span
+                    style={css(
+                      "font-family:var(--font-heading);font-weight:600;font-size:17px;line-height:1.22;color:var(--color-accent-800);text-wrap:pretty"
+                    )}
+                  >
+                    {title}
+                  </span>
                 </div>
-      
-                <div ref={sealRef} style={css("position:absolute;left:76%;top:50%;width:clamp(62px,16%,80px);aspect-ratio:1;border-radius:50%;background:#b3312f;color:var(--color-neutral-100);display:grid;place-items:center;opacity:0;transform:translate(-50%,-50%) rotate(-8deg);box-shadow:var(--shadow-md);pointer-events:none")}>
-                  <div style={css("width:74%;height:74%;border:1px solid color-mix(in srgb, #fff 55%, transparent);border-radius:50%;display:grid;place-items:center;font-family:var(--font-heading);font-style:italic;font-size:clamp(19px,4.4vw,25px);letter-spacing:.02em")}>LD</div>
-                </div>
-      
-                <p style={css("text-align:center;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 50%, transparent);margin:16px 0 0")}>Your envelope, as Iris will address it</p>
+                <p style={css("margin:0;font-size:14px;line-height:1.62;color:var(--color-neutral-700);text-wrap:pretty")}>{detail}</p>
               </div>
-      
-              <div style={css("animation-name:ldp-rise;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1);animation-timeline:view();animation-range:entry 12% cover 34%")}>
-                <div style={css("display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);margin-bottom:var(--space-4)")}>
-                  <span style={css("width:7px;height:7px;border-radius:50%;background:var(--color-accent);flex:none")}></span>
-                  <span style={css("font-size:13px;line-height:1.4")}>Sign-ups are open — send your address and Iris packs it with this month’s post.</span>
-                </div>
-      
-                <SubscribeForm
-                  onAddressChange={onAddressChange}
-                  onSealed={onSealed}
-                  onUnsealed={onUnsealed}
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── the photographs ────────────────────────────────────────────── */}
+      <section id="gallery" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(16px,5vw,44px);background:var(--color-accent-100)")}>
+        <div style={css("width:min(1120px,100%);margin:0 auto")}>
+          <div style={css("max-width:48ch")}>
+            <div style={kicker}>
+              <span style={rule} />
+              Photographed at the desk
+            </div>
+            <h2 style={h2}>The post, as it really looks</h2>
+            <p style={lede}>
+              Envelopes printed, sealed and addressed by hand, and the paper that goes inside them.
+              These are photographs of real post going out.
+            </p>
+          </div>
+
+          {/* Five across when there is room, two on a phone, and never a
+            * fractional column: the track floor is the width five would take,
+            * clamped so it cannot fall below a thumbnail people can see. */}
+          <div
+            style={css(
+              "display:grid;grid-template-columns:repeat(auto-fill,minmax(max(120px, min(45%, calc((100% - 64px) / 5))),1fr));gap:16px;margin-top:clamp(26px,4.4vh,48px)"
+            )}
+          >
+            {GALLERY.map(([src, alt]) => (
+              <figure key={src} style={tile}>
+                <img src={src} alt={alt} style={css("width:100%;aspect-ratio:3/4;object-fit:cover")} />
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── who you'll meet ────────────────────────────────────────────── */}
+      <section id="folk" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
+        <div style={css("width:min(1120px,100%);margin:0 auto")}>
+          <div style={css("max-width:50ch")}>
+            <div style={kicker}>
+              <span style={rule} />
+              This month&rsquo;s post
+            </div>
+            <h2 style={h2}>Who you&rsquo;ll meet this month</h2>
+            <p style={lede}>
+              Every envelope carries a second letter, written by somebody Iris met on the other side
+              of the door. This month it is one of these three.
+            </p>
+          </div>
+
+          <div style={css("position:relative;margin-top:clamp(26px,4.4vh,48px)")}>
+            <div style={css("display:flex;align-items:flex-end;justify-content:center;gap:clamp(2px,2.5vw,34px)")}>
+              {FOLK.map(([src, alt, width, height]) => (
+                <img
+                  key={src}
+                  src={src}
+                  alt={alt}
+                  style={css(
+                    `width:${width};height:${height};object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 16px 18px rgba(58,49,40,.16))`
+                  )}
                 />
-              </div>
+              ))}
             </div>
+            {/* The ground they stand on. */}
+            <div
+              style={css(
+                "height:1px;background:linear-gradient(90deg, transparent 0%, var(--color-neutral-400) 18%, var(--color-neutral-400) 82%, transparent 100%)"
+              )}
+            />
           </div>
-        </section>
-      
-        <SiteFooter />
-      </div>
-    </>
+
+          <div
+            style={css(
+              "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(2px,2.5vw,34px);margin-top:clamp(14px,2.4vh,22px);text-align:center"
+            )}
+          >
+            {FOLK_NAMES.map((name) => (
+              <h3
+                key={name}
+                style={css(
+                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(18px,2.6vw,27px);line-height:1.16;margin:0;color:var(--color-accent-800);text-wrap:balance"
+                )}
+              >
+                {name}
+              </h3>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── sign up ────────────────────────────────────────────────────── */}
+      <section id="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
+        <div style={css("position:absolute;inset:0;pointer-events:none")}>
+          <img
+            src="/assets/gallery-green-seals.jpg"
+            alt=""
+            style={css("width:100%;height:100%;object-fit:cover;filter:saturate(.62) brightness(1.06)")}
+          />
+          <div
+            style={css(
+              "position:absolute;inset:0;background:linear-gradient(180deg, rgba(248,243,232,.92) 0%, rgba(248,243,232,.82) 40%, rgba(248,243,232,.94) 100%)"
+            )}
+          />
+        </div>
+
+        <div
+          style={css(
+            "position:relative;width:min(660px,100%);margin:0 auto;padding:clamp(20px,5vw,44px);border-radius:var(--radius-lg);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-lg)"
+          )}
+        >
+          <div style={css("text-align:center;margin-bottom:clamp(22px,3.6vh,34px)")}>
+            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(32px,5.6vw,52px);line-height:1.04;margin:0;color:var(--color-accent-800)")}>
+              Receive a letter
+            </h2>
+            <p style={{ ...lede, maxWidth: "42ch", marginLeft: "auto", marginRight: "auto" }}>
+              Choose a subscription, tell Iris where to post it, and your address goes into this
+              month&rsquo;s batch.
+            </p>
+          </div>
+          <SubscribeForm />
+        </div>
+      </section>
+
+      <GlobalWaitlist />
+
+      <SiteFooter />
+    </div>
   );
 }

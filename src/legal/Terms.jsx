@@ -57,6 +57,11 @@ export default function Terms() {
         ))}
       </ul>
       <p>
+        A <strong>first</strong> envelope also carries {business.firstEnvelopeExtra.name} —{" "}
+        {business.firstEnvelopeExtra.detail}. It is sent once, at the start of your first
+        subscription, and not again with later envelopes.
+      </p>
+      <p>
         The artwork and the writing change from month to month — that is the point of a monthly
         letter — but the list of pieces does not. You always know in advance exactly what will be in
         the envelope: {business.piecesPerMonth} printed pieces, the same {business.piecesPerMonth}{" "}

@@ -287,11 +287,39 @@ export default function Privacy() {
         requires, and tell you plainly what happened and what to do about it.
       </p>
 
-      <h2>Cookies</h2>
+      <h2>Cookies, and what is kept in your browser</h2>
       <p>
         This site sets no advertising or tracking cookies. Razorpay&rsquo;s checkout window sets its
         own cookies when it opens, which are necessary to process the payment securely; those are
         governed by Razorpay&rsquo;s privacy policy.
+      </p>
+      <p>
+        One thing is stored in your own browser:{" "}
+        <strong>a draft of the sign-up form as you fill it in</strong>, so that a reload, a closed
+        tab, or a first attempt that had to be retried does not cost you a whole postal address
+        typed out again.
+      </p>
+      <ul>
+        <li>
+          It stays on your device. It is not sent to us, and we cannot read it &mdash; the only
+          thing that ever transmits those details is the sign-up itself, when you press the button.
+        </li>
+        <li>
+          It is <strong>deleted the moment a sign-up completes</strong>, and expires by itself after
+          seven days if you never come back.
+        </li>
+        <li>
+          You can clear it at any time: the form offers <em>Start fresh</em> when it has picked up a
+          draft, and clearing your browser&rsquo;s site data removes it too.
+        </li>
+        <li>
+          It holds only what you typed into the form. It never contains card, UPI or bank details
+          &mdash; those are entered in Razorpay&rsquo;s own window and never touch this site.
+        </li>
+      </ul>
+      <p>
+        If you are filling the form in on a shared or public computer, press <em>Start fresh</em>{" "}
+        when you are done, or use a private window.
       </p>
 
       <h2>Changes</h2>

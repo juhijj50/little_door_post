@@ -29,6 +29,11 @@ export default function Pricing() {
         ))}
       </ul>
       <p>
+        A <strong>first</strong> envelope also carries {business.firstEnvelopeExtra.name} —{" "}
+        {business.firstEnvelopeExtra.detail}. It is sent once, at the start of your first
+        subscription, and not again with later envelopes.
+      </p>
+      <p>
         The artwork and the writing are new each month. The list of pieces is not — it is the same{" "}
         {business.piecesPerMonth} every time, so you know what you are paying for before you pay for
         it.
@@ -70,7 +75,8 @@ export default function Pricing() {
       <h2>What is included in that price</h2>
       <ul>
         <li>
-          All {business.piecesPerMonth} printed pieces, every month of your subscription.
+          All {business.piecesPerMonth} printed pieces, every month of your subscription — plus{" "}
+          {business.firstEnvelopeExtra.name} in your first envelope.
         </li>
         <li>
           <strong>Postage anywhere in India.</strong> No delivery charge, no surcharge for remote

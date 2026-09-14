@@ -1,15 +1,24 @@
-/*  The sign-up flow, in four stages:
+/*  The sign-up flow.
  *
- *    region  →  is the envelope going to India or somewhere else?
- *                (somewhere else stops there — nothing abroad is sold or stored)
- *    details →  everything Iris needs to address it
- *    pay     →  Razorpay Checkout
- *    sealed  →  confirmed
+ *    1 plan   →  how many months
+ *    2 who    →  name, email, phone, Instagram, birthday
+ *    3 where  →  the address it is posted to, and the optional extras
+ *    pay      →  Razorpay Checkout
+ *    sealed   →  confirmed
  *
- *  There is no open/closed state here. The site is only linked from the bio
- *  while sign-ups are running, so reaching this page at all is the permission.
- *  That is also why nothing on screen waits for the API: the form is usable the
- *  instant it renders, and /api/config only fills in the prices when it lands.
+ *  One part on screen at a time, each replacing the last in the same panel
+ *  rather than being appended below it — three parts open at once made a very
+ *  long page on a phone, and the sign-up button walked further down it with
+ *  every answer.
+ *
+ *  Nothing typed is lost by that: every part reads and writes one `values`
+ *  object, so a part that is off screen still has its answers. Going back is
+ *  free, and offered two ways — the Back button, and the numbered steps along
+ *  the top, where any part already completed is a link to it.
+ *
+ *  India only. Global shipping is being worked out, and until it is, the
+ *  backend refuses an international sign-up outright — so the form does not
+ *  ask a question it cannot honour. It says so in part three instead.
  *
  *  Payments are switched on by the backend, not here: each sign-up comes back
  *  with a payment block whose `enabled` flag decides between a pay button and a
@@ -17,12 +26,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "./css.js";
-import {
-  createSubscription,
-  getConfig,
-  loadRazorpayCheckout,
-  verifyPayment,
-} from "./api.js";
+import { createSubscription, getConfig, loadRazorpayCheckout, verifyPayment } from "./api.js";
+import { business } from "./business.js";
 
 const STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
@@ -36,10 +41,91 @@ const STATES = [
 const EMPTY = {
   plan_months: 1,
   first_name: "", last_name: "", email: "",
-  phone_cc: "+91", phone_number: "", instagram: "",
+  phone_cc: "+91", phone_number: "", instagram: "", birthdate: "",
   promo_code: "", is_gift: false, gift_message: "",
   address_line1: "", address_line2: "", landmark: "", city: "", state: "", pincode: "",
-  country: "", birthdate: "", interests_note: "",
+  interests_note: "",
+};
+
+/*  The half-filled form, kept in this browser.
+ *
+ *  A sign-up asks for a name, a phone number and a full postal address, and
+ *  the API it posts to sleeps after fifteen minutes idle. Losing all of that
+ *  to a reload, a closed tab or a first attempt that had to be retried is the
+ *  kind of small disaster people do not come back from.
+ *
+ *  It stays in the reader's own browser and is never sent anywhere by this
+ *  code — the only thing that posts it is the sign-up they came to make. It is
+ *  cleared the moment a sign-up completes, and expires by itself after a week
+ *  so an address does not sit in a shared browser indefinitely.
+ *
+ *  Every call is wrapped: localStorage throws outright in some private modes,
+ *  and a draft is a convenience that must never be the reason a form breaks.
+ */
+const DRAFT_KEY = "ldp.signup.draft.v1";
+const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const readDraft = () => {
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved?.values || Date.now() - (saved.savedAt || 0) > DRAFT_TTL_MS) {
+      window.localStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    /* Spread over EMPTY rather than trusting what was stored: a draft written
+     * by an older version of this form is missing whatever has been added
+     * since, and a missing key would make an input uncontrolled. */
+    return { values: { ...EMPTY, ...saved.values }, part: saved.part || 1 };
+  } catch {
+    return null;
+  }
+};
+
+const writeDraft = (values, part) => {
+  try {
+    window.localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({ values, part, savedAt: Date.now() })
+    );
+  } catch {
+    /* Full, blocked, or private browsing. Nothing to do and nothing to say —
+     * the form works, it simply will not be remembered. */
+  }
+};
+
+const clearDraft = () => {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* As above. */
+  }
+};
+
+/* Worth remembering only once there is something in it. Landing on the page,
+ * touching nothing and leaving should not leave a draft behind. */
+const worthSaving = (values) =>
+  Object.entries(values).some(([k, v]) => {
+    if (k === "plan_months") return v !== EMPTY.plan_months;
+    if (k === "phone_cc") return v !== EMPTY.phone_cc;
+    if (typeof v === "boolean") return v;
+    return typeof v === "string" && v.trim() !== "";
+  });
+
+/* What each part needs before the next one opens. Instagram and the birthday
+ * are in here on purpose: Iris waves back on Instagram, and the birthday is
+ * what the extra envelope on the day is keyed to — both were optional and both
+ * were routinely left blank, which made neither possible. */
+const REQUIRED = {
+  who: ["first_name", "last_name", "email", "phone_number", "instagram", "birthdate"],
+  where: ["address_line1", "city", "state", "pincode"],
+};
+
+const LABELS = {
+  first_name: "first name", last_name: "last name", email: "email",
+  phone_number: "phone number", instagram: "Instagram handle", birthdate: "birthday",
+  address_line1: "street address", city: "city", state: "state", pincode: "PIN code",
 };
 
 /* Defined at module scope so React keeps the input mounted between renders —
@@ -52,82 +138,202 @@ const Field = ({ id, label, optional, hint, error, children }) => (
     </label>
     {children}
     {hint && !error && (
-      <div
-        style={css(
-          "font-size:11px;line-height:1.5;margin-top:4px;color:color-mix(in srgb, var(--color-text) 52%, transparent)"
-        )}
-      >
-        {hint}
-      </div>
+      <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:var(--color-neutral-600)")}>{hint}</div>
     )}
-    {error && (
-      <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>{error}</div>
-    )}
+    {error && <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>{error}</div>}
   </div>
+);
+
+const Legend = ({ children }) => (
+  <legend
+    style={css(
+      "padding:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(20px,2.8vw,25px);line-height:1.25;color:var(--color-accent-800)"
+    )}
+  >
+    {children}
+  </legend>
+);
+
+/* A part of the form. `first` skips the rule above it, which is only there to
+ * separate one part from the last. */
+const Part = ({ first, children }) => (
+  <fieldset
+    style={css(
+      "border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-3)" +
+        (first ? "" : ";border-top:1px solid var(--color-neutral-300);padding-top:clamp(20px,3.2vh,30px)")
+    )}
+  >
+    {children}
+  </fieldset>
+);
+
+/* The three parts, named. With only one on screen at a time the reader needs
+ * something that says where they are and how much is left — and it doubles as
+ * the way back: a part already done is a button to it. */
+const STEPS = ["Subscription", "Who it’s for", "Where it goes"];
+
+const Stepper = ({ part, onGo }) => (
+  <ol
+    style={css(
+      "display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;list-style:none;margin:0;padding:0"
+    )}
+  >
+    {STEPS.map((label, i) => {
+      const n = i + 1;
+      const done = n < part;
+      const here = n === part;
+      const body = (
+        <>
+          <span
+            style={css(
+              "display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:12px;flex:none;" +
+                (here
+                  ? "background:var(--color-accent-600);color:#fff"
+                  : done
+                  ? "background:var(--color-accent-200);color:var(--color-accent-800)"
+                  : "background:var(--color-neutral-200);color:var(--color-neutral-600)")
+            )}
+          >
+            {done ? "✓" : n}
+          </span>
+          <span>{label}</span>
+        </>
+      );
+      const shared =
+        "display:inline-flex;align-items:center;gap:7px;font-size:13px;line-height:1.3;";
+
+      return (
+        <li key={label} style={css("display:flex;align-items:center;gap:10px")}>
+          {done ? (
+            <button
+              type="button"
+              onClick={() => onGo(n)}
+              style={css(
+                shared +
+                  "background:none;border:0;padding:0;cursor:pointer;font:inherit;font-size:13px;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:3px"
+              )}
+            >
+              {body}
+            </button>
+          ) : (
+            <span
+              aria-current={here ? "step" : undefined}
+              style={css(
+                shared +
+                  (here ? "color:var(--color-accent-800);font-weight:600" : "color:var(--color-neutral-600)")
+              )}
+            >
+              {body}
+            </span>
+          )}
+          {n < STEPS.length && (
+            <span aria-hidden="true" style={css("width:14px;height:1px;background:var(--color-neutral-400)")} />
+          )}
+        </li>
+      );
+    })}
+  </ol>
 );
 
 /* How long they are subscribing for — a duration, not a quantity. One letter
  * arrives each month either way; a longer plan is a longer commitment at a
- * better monthly rate. So each button shows the total it charges, with the
- * rate underneath as the reason to take the longer one.
+ * better monthly rate. So each row shows the total it charges, with the rate
+ * beside it as the reason to take the longer one.
  *
  * The lengths and both figures come from /api/config — which reads them from
  * the plans table — so a price change never needs a redeploy, and this renders
  * whatever is on offer rather than a hardcoded three. */
-const PlanPicker = ({ options, value, onChange, error }) => {
+const PlanPicker = ({ options, value, onChange, error, pending }) => {
+  /* Never nothing. An empty list used to render as empty space under the
+   * heading, which read as a broken page rather than a slow one — and the
+   * reader could still press Next and buy the default month without ever
+   * having been shown a price. */
+  if (pending) {
+    return (
+      <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")} aria-busy="true">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={css(
+              "height:62px;border-radius:var(--radius-md);border:1px solid var(--color-neutral-300);background:var(--color-neutral-200);opacity:" +
+                (0.8 - i * 0.2)
+            )}
+          />
+        ))}
+        <p style={css("margin:0;font-size:12px;color:var(--color-neutral-600)")}>
+          Fetching this month&rsquo;s prices…
+        </p>
+      </div>
+    );
+  }
+
   if (!options?.length) return null;
 
   return (
-    <div className="field">
-      <label>How many months?</label>
-      <div
-        style={css(
-          "display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:var(--space-2);margin-top:2px"
-        )}
-      >
-        {options.map((plan) => {
-          const on = plan.months === value;
-          return (
-            <button
-              key={plan.months}
-              type="button"
-              onClick={() => onChange(plan.months)}
-              aria-pressed={on}
-              style={css(
-                "cursor:pointer;font:inherit;text-align:left;padding:12px 13px;border-radius:var(--radius-md);transition:background .2s,border-color .2s;" +
-                  (on
-                    ? "border:1px solid var(--color-accent);background:var(--color-accent-100)"
-                    : "border:1px solid var(--color-divider);background:transparent")
-              )}
-            >
-              <div
+    <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")}>
+      {options.map((plan) => {
+        const on = plan.months === value;
+        const months = `${plan.months} ${plan.months === 1 ? "month" : "months"}`;
+        return (
+          <label
+            key={plan.months}
+            className="radio"
+            style={css(
+              "display:flex;align-items:flex-start;gap:14px;width:100%;padding:15px 18px;border-radius:var(--radius-md);font-size:15px;" +
+                (on
+                  ? "border:1px solid var(--color-accent-500);background:var(--color-accent-100)"
+                  : "border:1px solid var(--color-neutral-300);background:var(--color-neutral-100)")
+            )}
+          >
+            <input
+              type="radio"
+              name="plan_months"
+              value={plan.months}
+              checked={on}
+              onChange={() => onChange(plan.months)}
+            />
+            <span className="dot" style={css("margin-top:4px")} />
+            <span style={css("flex:1;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px")}>
+              <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800)")}>
+                {months}
+              </span>
+              <span style={css("font-size:13px;color:var(--color-neutral-600)")}>
+                {plan.months === 1 ? plan.note || "one envelope" : `${plan.months} envelopes · ${plan.rateDisplay} a month`}
+              </span>
+              <span
                 style={css(
-                  "font-family:var(--font-heading);font-size:17px;line-height:1.1;" +
-                    (on ? "color:var(--color-accent-800)" : "color:var(--color-text)")
+                  "margin-left:auto;font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800);white-space:nowrap"
                 )}
               >
-                {plan.months} {plan.months === 1 ? "month" : "months"}
-              </div>
-              <div style={css("font-size:15px;line-height:1.3;margin-top:4px")}>{plan.totalDisplay}</div>
-              {plan.months > 1 && (
-                <div
-                  style={css(
-                    "font-size:11px;line-height:1.4;margin-top:2px;color:color-mix(in srgb, var(--color-text) 58%, transparent)"
-                  )}
-                >
-                  {plan.rateDisplay} a month
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
-      {error && (
-        <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>{error}</div>
-      )}
+                {plan.totalDisplay}
+              </span>
+            </span>
+          </label>
+        );
+      })}
+      {error && <div style={css("font-size:11px;line-height:1.5;color:#b3312f")}>{error}</div>}
     </div>
   );
 };
+
+/*  What to say when a sign-up will not send.
+ *
+ *  Two different situations wearing the same shape. Something wrong with what
+ *  was typed is the reader's to fix and the server says exactly what it is. A
+ *  server that did not answer at all is nobody's fault and is very often just
+ *  the free-tier API waking up, which takes seconds — so it asks for one more
+ *  go rather than reporting a failure. Nothing has been charged either way.
+ *
+ *  Kept out of the up-front banner on purpose: told at the moment it happens,
+ *  it is useful; shown before anyone has typed anything, it only suggests the
+ *  form is broken when it is not.
+ */
+const WAKING = new Set([0, 408, 429, 500, 502, 503, 504]);
+
+const sendingMessage = (err) =>
+  WAKING.has(err?.status)
+    ? "The sign-up desk is just waking up. Everything you have typed is safe — please press the button again in a few seconds."
+    : err?.message || "Something went wrong. Try again in a moment.";
 
 const Notice = ({ tone = "error", children }) =>
   !children ? null : (
@@ -136,23 +342,30 @@ const Notice = ({ tone = "error", children }) =>
         "margin:0;padding:10px 13px;font-size:13px;line-height:1.55;border-radius:var(--radius-md);border:1px solid " +
           (tone === "error"
             ? "color-mix(in srgb, #b3312f 40%, transparent);color:#8c2523;background:color-mix(in srgb, #b3312f 7%, transparent)"
-            : "var(--color-divider);color:var(--color-text);background:var(--color-neutral-100)")
+            : "var(--color-neutral-300);color:var(--color-text);background:var(--color-neutral-200)")
       )}
     >
       {children}
     </p>
   );
 
-export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed }) {
+export default function SubscribeForm({ onSealed, onUnsealed }) {
   const [config, setConfig] = useState(null);
   /* Only ever a warning. The form does not need /config to work — it carries
    * the price and nothing else — so a slow or missing answer must not be
-   * allowed to bar the way, which is what disabling these buttons used to do. */
+   * allowed to bar the way. */
   const [configFailed, setConfigFailed] = useState(false);
 
-  const [stage, setStage] = useState("region");
-  const [region, setRegion] = useState(null);
-  const [values, setValues] = useState(EMPTY);
+  /* Read once, lazily, so a restored draft is in the very first render and
+   * the reader never sees an empty form flash back to a full one. */
+  const [restored] = useState(readDraft);
+  const [resumed, setResumed] = useState(() => Boolean(restored));
+
+  /* Which part is on screen. One at a time; the stepper and the Back buttons
+   * move it in both directions. */
+  const [part, setPart] = useState(() => restored?.part || 1);
+  const [stage, setStage] = useState("form"); // form | pay | sealed
+  const [values, setValues] = useState(() => restored?.values || EMPTY);
   const [fieldErrs, setFieldErrs] = useState({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -164,9 +377,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
    *
    * Starts false and is never pre-ticked: the Consumer Protection (E-Commerce)
    * Rules, 2020 require consent to a purchase to be an explicit affirmative
-   * act, and specifically not "automatic means such as pre-ticked checkboxes".
-   * It gates the pay button rather than the details form, because this is the
-   * step where money actually moves. */
+   * act, and specifically not "automatic means such as pre-ticked checkboxes". */
   const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
@@ -179,37 +390,73 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     };
   }, []);
 
-  /* Keep the envelope illustration addressed as they type. */
+  /* Kept up to date as they type. Writing on every keystroke is fine — it is
+   * a few hundred bytes to the same key, and the alternative is deciding when
+   * a pause is long enough to count, which is how drafts get lost. */
   useEffect(() => {
-    onAddressChange?.({
-      name: [values.first_name, values.last_name].filter(Boolean).join(" "),
-      street: values.address_line1,
-      cityLine: [values.city, values.pincode].filter(Boolean).join(" · "),
-      country: region === "india" ? "India" : values.country,
-    });
-  }, [values, region, onAddressChange]);
+    if (stage !== "form") return;
+    if (worthSaving(values)) writeDraft(values, part);
+  }, [values, part, stage]);
 
   const set = useCallback((name, value) => {
     setValues((v) => ({ ...v, [name]: value }));
     setFieldErrs((e) => (e[name] ? { ...e, [name]: undefined } : e));
   }, []);
 
-  /* The plans on offer for a region, and the cheapest per-month among them —
-   * both empty until /config lands, which the callers cope with. */
-  const plansFor = useCallback((r) => config?.plans?.[r] || [], [config]);
-
   const onChange = useCallback((e) => set(e.target.name, e.target.value), [set]);
 
-  const chooseRegion = (next) => {
-    setRegion(next);
-    setFormError("");
+  const livePlans = config?.plans?.india || [];
+
+  /* Falling back to the rate card in business.js rather than to nothing.
+   * It mirrors the plans table, and the amount actually charged is computed
+   * server-side from that same table — so the worst case here is a figure that
+   * is briefly out of date, shown again from the server on the pay step before
+   * a rupee moves. An empty list, by contrast, is a dead end. */
+  const fallbackPlans = useMemo(
+    () =>
+      business.plans.map((p) => ({
+        months: p.months,
+        rateDisplay: p.rate,
+        totalDisplay: p.total,
+        note: p.note,
+      })),
+    []
+  );
+
+  const plans = livePlans.length ? livePlans : configFailed ? fallbackPlans : [];
+  const plansPending = !livePlans.length && !configFailed;
+
+  /* Open the next part, or say what is still blank. Checked here rather than
+   * left to the browser so the message names the field in words. */
+  const advance = (which, next) => {
+    const missing = REQUIRED[which].filter((k) => !String(values[k] || "").trim());
+    if (missing.length) {
+      setFieldErrs(Object.fromEntries(missing.map((k) => [k, `Iris needs your ${LABELS[k]}.`])));
+      setFormError(`Still to fill in: ${missing.map((k) => LABELS[k]).join(", ")}.`);
+      return;
+    }
     setFieldErrs({});
-    setStage(next === "india" ? "details" : "international");
+    setFormError("");
+    setPart(next);
   };
 
+  /* Back, or a jump to any part already done via the stepper.
+   *
+   * `values` is untouched: every part reads and writes the one object, so the
+   * answers are still there when the part comes back on screen. Only the
+   * complaints are cleared — errors raised about a part you have left are
+   * noise by the time you return to it. */
+  const goTo = useCallback((n) => {
+    setFieldErrs({});
+    setFormError("");
+    setPart(n);
+  }, []);
+
   const startOver = () => {
-    setStage("region");
-    setRegion(null);
+    clearDraft();
+    setResumed(false);
+    setPart(1);
+    setStage("form");
     setValues(EMPTY);
     setFieldErrs({});
     setFormError("");
@@ -221,39 +468,41 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
 
   const payload = useMemo(() => {
     const clean = (s) => (typeof s === "string" ? s.trim() : s);
-    const base = {
-      region,
+    return {
+      region: "india",
       plan_months: values.plan_months,
       first_name: clean(values.first_name),
       last_name: clean(values.last_name),
       email: clean(values.email),
       phone_cc: clean(values.phone_cc) || "+91",
       phone_number: clean(values.phone_number),
+      instagram: clean(values.instagram),
+      birthdate: clean(values.birthdate),
       promo_code: clean(values.promo_code) || null,
       is_gift: values.is_gift,
       gift_message: values.is_gift ? clean(values.gift_message) || null : null,
-      instagram: clean(values.instagram) || null,
-      birthdate: clean(values.birthdate) || null,
       interests_note: clean(values.interests_note) || null,
+      address_line1: clean(values.address_line1),
+      address_line2: clean(values.address_line2) || null,
+      landmark: clean(values.landmark) || null,
+      city: clean(values.city),
+      state: clean(values.state),
+      pincode: clean(values.pincode),
+      country: "India",
     };
-    if (region === "india") {
-      return {
-        ...base,
-        address_line1: clean(values.address_line1),
-        address_line2: clean(values.address_line2) || null,
-        landmark: clean(values.landmark) || null,
-        city: clean(values.city),
-        state: clean(values.state),
-        pincode: clean(values.pincode),
-        country: "India",
-      };
-    }
-    return { ...base, country: clean(values.country) };
-  }, [region, values]);
+  }, [values]);
 
-  const submitDetails = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
+
+    const missing = [...REQUIRED.who, ...REQUIRED.where].filter((k) => !String(values[k] || "").trim());
+    if (missing.length) {
+      setFieldErrs(Object.fromEntries(missing.map((k) => [k, `Iris needs your ${LABELS[k]}.`])));
+      setFormError(`Still to fill in: ${missing.map((k) => LABELS[k]).join(", ")}.`);
+      return;
+    }
+
     setBusy(true);
     setFormError("");
     setFieldErrs({});
@@ -261,12 +510,10 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
       const result = await createSubscription(payload);
       setSubscription(result.subscription);
       setPayment(result.payment);
-      /* Only the India form submits — the international branch never gets
-       * here, because it has no form to submit. */
       setStage("pay");
     } catch (err) {
       setFieldErrs(err.fields || {});
-      setFormError(err.message);
+      setFormError(sendingMessage(err));
     } finally {
       setBusy(false);
     }
@@ -297,7 +544,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           contact: `${values.phone_cc}${values.phone_number}`,
         },
         notes: { reference: subscription.reference },
-        theme: { color: "#b3312f" },
+        theme: { color: "#6b7a46" },
         modal: {
           /* They closed the window without paying — put the button back
            * rather than leaving a spinner running. */
@@ -311,6 +558,7 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               razorpay_signature: response.razorpay_signature,
             });
             setSubscription(result.subscription);
+            clearDraft();
             setStage("sealed");
             onSealed?.();
           } catch (err) {
@@ -334,274 +582,17 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
     }
   };
 
-  const gap = css("display:flex;flex-direction:column;gap:var(--space-3)");
-  const twoUp = css("display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:var(--space-3)");
+  const gap = css("display:flex;flex-direction:column;gap:clamp(22px,3.4vh,32px)");
+  const twoUp = css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:var(--space-3)");
   const panel = css(
-    "border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:clamp(20px,4vw,30px);background:var(--color-neutral-100)"
+    "border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);padding:clamp(20px,4vw,30px);background:var(--color-neutral-200)"
   );
   const heading = css(
-    "font-family:var(--font-heading);font-style:italic;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-700);margin:0"
+    "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-800);margin:0"
   );
+  const muted = css("font-size:13px;line-height:1.7;color:var(--color-neutral-700)");
 
-  /* ── closed: no form at all ────────────────────────────────────────────
-   *
-   * Shown instead of the form, not alongside it. Filling in an address only to
-   * be told at the end that the desk is shut is a waste of somebody's evening;
-   * far better to say when to come back before they start.
-   *
-   * Only when the API has actually said so. While config is loading, or if it
-   * never arrives, the form stays — a slow API must not look like a shut door,
-   * and a sign-up that gets through is worth more than a tidy message.
-   */
-  /* ── which door? ─────────────────────────────────────────────────────── */
-  if (stage === "region") {
-    return (
-      <div style={gap}>
-        <Notice tone="info">First things first: where should the envelope be posted?</Notice>
-        {configFailed && (
-          <Notice>
-            The sign-up desk is slow to answer just now. You can still fill everything in &mdash;
-            if it will not send, give it a minute and try again.
-          </Notice>
-        )}
-        <button
-          className="btn btn-primary btn-block"
-          type="button"
-          onClick={() => chooseRegion("india")}
-          style={css("padding:16px 22px;font-size:15px;flex-direction:column;gap:3px;margin-top:0")}
-        >
-          <span>Post it within India</span>
-          <span style={css("font-family:var(--font-body);font-size:12px;opacity:.75")}>
-            One envelope a month
-          </span>
-        </button>
-        <button
-          className="btn btn-secondary btn-block"
-          type="button"
-          onClick={() => chooseRegion("international")}
-          style={css("padding:16px 22px;font-size:15px;flex-direction:column;gap:3px;margin-top:0")}
-        >
-          <span>Post it outside India</span>
-          <span style={css("font-family:var(--font-body);font-size:12px;opacity:.7")}>
-            Ask us for the postage
-          </span>
-        </button>
-      </div>
-    );
-  }
-
-  /* ── outside India: nothing to collect ─────────────────────────────────
-   *
-   * No form and no request. There is no shipping abroad yet, so there is
-   * nothing to sell and nothing worth keeping — and no promise made that would
-   * need an address to keep it.
-   */
-  if (stage === "international") {
-    return (
-      <div style={gap}>
-        <div style={panel}>
-          <h3 style={heading}>Not on the site yet.</h3>
-          <hr className="hr" />
-          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            Iris does post abroad &mdash; what is not settled yet is the postage, which
-            varies far too much by country to put a single price on. So there is nothing
-            here for you to pay, rather than nothing to send.
-          </p>
-          <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-            <strong>Write to us on Instagram</strong> and Iris will work out the postage to
-            where you are. That is also where it will be announced once the price for your
-            part of the world is settled.
-          </p>
-        </div>
-        <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
-          style={css("margin-top:0")}>
-          &larr; Back
-        </button>
-      </div>
-    );
-  }
-
-  /* ── India: the details ──────────────────────────────────────────────── */
-  if (stage === "details") {
-    return (
-      <form onSubmit={submitDetails} style={gap}>
-        <PlanPicker
-          options={plansFor("india")}
-          value={values.plan_months}
-          onChange={(m) => set("plan_months", m)}
-          error={fieldErrs.plan_months}
-        />
-
-        <div style={twoUp}>
-          <Field id="ldp-first" label="First name" error={fieldErrs.first_name}
-            hint="As your post office likes it — Iris writes it by hand.">
-            <input className="input" id="ldp-first" name="first_name" type="text" required
-              autoComplete="given-name" value={values.first_name} onChange={onChange}
-              placeholder="Meera" />
-          </Field>
-          <Field id="ldp-last" label="Last name" optional error={fieldErrs.last_name}>
-            <input className="input" id="ldp-last" name="last_name" type="text"
-              autoComplete="family-name" value={values.last_name} onChange={onChange}
-              placeholder="Raghavan" />
-          </Field>
-        </div>
-
-        <Field id="ldp-email" label="Email" error={fieldErrs.email}>
-          <input className="input" id="ldp-email" name="email" type="email" required
-            autoComplete="email" value={values.email} onChange={onChange}
-            placeholder="you@somewhere.com" />
-        </Field>
-
-        <div className="field">
-          <label htmlFor="ldp-phone">Phone</label>
-          {/* Two inputs, one field: the code is a short fixed thing and the
-            * number is the part that identifies somebody, so they are stored
-            * and compared separately. */}
-          <div style={css("display:grid;grid-template-columns:92px 1fr;gap:var(--space-2);margin-top:2px")}>
-            <input className="input" name="phone_cc" type="text" required
-              aria-label="Country code" value={values.phone_cc} onChange={onChange}
-              placeholder="+91" />
-            <input className="input" id="ldp-phone" name="phone_number" type="tel" required
-              inputMode="numeric" autoComplete="tel-national"
-              value={values.phone_number} onChange={onChange}
-              placeholder="For delivery only" />
-          </div>
-          {(fieldErrs.phone_cc || fieldErrs.phone_number) && (
-            <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>
-              {fieldErrs.phone_cc || fieldErrs.phone_number}
-            </div>
-          )}
-        </div>
-
-        <Field id="ldp-insta" label="Instagram" error={fieldErrs.instagram}
-          hint="So Iris knows who you are when she waves back.">
-          <input className="input" id="ldp-insta" name="instagram" type="text" required
-            value={values.instagram} onChange={onChange} placeholder="@yourhandle" />
-        </Field>
-
-        <hr className="hr" style={css("margin:var(--space-2) 0")} />
-
-        <Field id="ldp-street" label="Street address" error={fieldErrs.address_line1}>
-          <input className="input" id="ldp-street" name="address_line1" type="text" required
-            autoComplete="address-line1" value={values.address_line1} onChange={onChange}
-            placeholder="House / flat number and street" />
-        </Field>
-        <Field id="ldp-area" label="Area, colony or apartment" optional error={fieldErrs.address_line2}>
-          <input className="input" id="ldp-area" name="address_line2" type="text"
-            autoComplete="address-line2" value={values.address_line2} onChange={onChange}
-            placeholder="Sector, society, block" />
-        </Field>
-        <Field id="ldp-landmark" label="Landmark" optional error={fieldErrs.landmark}>
-          <input className="input" id="ldp-landmark" name="landmark" type="text"
-            value={values.landmark} onChange={onChange} placeholder="Near the old banyan tree" />
-        </Field>
-
-        <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-3)")}>
-          <Field id="ldp-city" label="City" error={fieldErrs.city}>
-            <input className="input" id="ldp-city" name="city" type="text" required
-              autoComplete="address-level2" value={values.city} onChange={onChange}
-              placeholder="Town or city" />
-          </Field>
-          <Field id="ldp-state" label="State" error={fieldErrs.state}>
-            <select className="input" id="ldp-state" name="state" required
-              autoComplete="address-level1" value={values.state} onChange={onChange}>
-              <option value="">Choose a state</option>
-              {STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </Field>
-          <Field id="ldp-pin" label="PIN code" error={fieldErrs.pincode}>
-            <input className="input" id="ldp-pin" name="pincode" type="text" required
-              inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} autoComplete="postal-code"
-              value={values.pincode}
-              onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="6 digits" />
-          </Field>
-        </div>
-
-        <hr className="hr" style={css("margin:var(--space-2) 0")} />
-
-        <Field id="ldp-bday" label="Birthday" optional error={fieldErrs.birthdate}
-          hint="Iris likes to send something extra on the day.">
-          <input className="input" id="ldp-bday" name="birthdate" type="date"
-            max={new Date().toISOString().slice(0, 10)} value={values.birthdate} onChange={onChange} />
-        </Field>
-
-        {/* Written out rather than picked from a list. A row of tick-boxes only
-          * ever tells Iris which of her own suggestions a reader recognised;
-          * their own words say something she could not have guessed. */}
-        <Field id="ldp-note" label="What do you like reading about?" optional
-          error={fieldErrs.interests_note}
-          hint="It helps Iris choose what to write about next.">
-          <textarea className="input" id="ldp-note" name="interests_note" rows={3} maxLength={600}
-            value={values.interests_note} onChange={onChange}
-            placeholder="A place you love, a story you want, a person to write to" />
-        </Field>
-
-        <hr className="hr" style={css("margin:var(--space-2) 0")} />
-
-        <Field id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}
-          hint="For readers who were here in September — it works from the number you signed up with.">
-          {/* No placeholder: a code in grey text is a code being handed out.
-            * The people who have one already know what it says. */}
-          <input className="input" id="ldp-code" name="promo_code" type="text"
-            value={values.promo_code}
-            onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
-            style={css("letter-spacing:.06em")} />
-        </Field>
-
-        <div className="field">
-          <label className="radio" style={css("cursor:pointer")}>
-            <input type="checkbox" checked={values.is_gift}
-              onChange={(e) => set("is_gift", e.target.checked)}
-              style={css("position:static;opacity:1;width:auto;height:auto;pointer-events:auto;accent-color:var(--color-accent)")} />
-            <span style={css("font-size:14px")}>This is a gift for somebody else</span>
-          </label>
-          {values.is_gift && (
-            <div style={css("margin-top:var(--space-3)")}>
-              <Field id="ldp-gift" label="A line to go in with it"
-                error={fieldErrs.gift_message}
-                hint="Iris copies it onto a card and tucks it into the first envelope.">
-                <textarea className="input" id="ldp-gift" name="gift_message" rows={3}
-                  maxLength={600} required value={values.gift_message} onChange={onChange}
-                  placeholder="For Ammu, who reads everything twice — happy birthday." />
-              </Field>
-            </div>
-          )}
-        </div>
-
-        <Notice>{formError}</Notice>
-
-        {/* The DPDP Act wants the notice at the point the details are handed
-          * over, not only on a page somewhere else. Nothing is charged by this
-          * button, so it is a notice rather than a consent gate — the tick
-          * that authorises the purchase is on the next step. */}
-        <p
-          style={css(
-            "font-size:12px;line-height:1.65;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 60%, transparent)"
-          )}
-        >
-          We use these details to address and post your envelope, and nothing else. We never see
-          your card or UPI details. See the{" "}
-          <a href="/privacy" target="_blank" rel="noreferrer noopener">
-            Privacy Policy
-          </a>
-          .
-        </p>
-
-        <button className="btn btn-primary btn-block" type="submit" disabled={busy}
-          style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
-          {busy ? "Just a moment…" : "Continue"}
-        </button>
-        <button className="btn btn-ghost" type="button" onClick={startOver} style={css("font-size:13px")}>
-          &larr; I&rsquo;m not in India
-        </button>
-      </form>
-    );
-  }
-
-  /* ── India: payment ──────────────────────────────────────────────────── */
+  /* ── payment ───────────────────────────────────────────────────────── */
   if (stage === "pay") {
     const amount = payment?.amount_display || subscription?.amount_display;
 
@@ -618,35 +609,26 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
                 "Card and UPI payments are being set up and are not live yet. Iris will email you the moment checkout opens."}
             </p>
             <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-              <strong>Nothing has been charged.</strong> Your place for this month is held under
-              the reference below &mdash; keep it if you write to us.
+              <strong>Nothing has been charged.</strong> Your place for this month is held under the
+              reference below &mdash; keep it if you write to us.
             </p>
             <div
               style={css(
-                "display:flex;align-items:baseline;gap:12px;padding:11px 14px;border:1px solid var(--color-divider);border-radius:var(--radius-md);background:var(--color-bg)"
+                "display:flex;align-items:baseline;gap:12px;padding:11px 14px;border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);background:var(--color-neutral-100)"
               )}
             >
-              <span
-                style={css(
-                  "font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)"
-                )}
-              >
+              <span style={css("font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-600)")}>
                 Reference
               </span>
               <span style={css("font-size:16px;letter-spacing:.05em;font-feature-settings:'tnum'")}>
                 {subscription.reference}
               </span>
             </div>
-            <p
-              style={css(
-                "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 65%, transparent)"
-              )}
-            >
+            <p style={{ ...muted, marginTop: "var(--space-3)" }}>
               When it opens, your subscription costs {amount}, postage included.
             </p>
           </div>
-          <button className="btn btn-secondary btn-block" type="button" onClick={startOver}
-            style={css("margin-top:0")}>
+          <button className="btn btn-secondary btn-block" type="button" onClick={startOver} style={css("margin-top:0")}>
             Add someone else
           </button>
         </div>
@@ -660,45 +642,31 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
           <hr className="hr" />
           <div
             style={css(
-              "display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:var(--space-3);border-bottom:1px solid var(--color-divider)"
+              "display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:var(--space-3);border-bottom:1px solid var(--color-neutral-300)"
             )}
           >
             <span style={css("font-size:15px;line-height:1.6")}>
-              {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"} &mdash; from {subscription.cycle}
+              {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"} &mdash; from{" "}
+              {subscription.cycle}
             </span>
-            <span
-              style={css(
-                "font-family:var(--font-heading);font-size:clamp(22px,4vw,28px);line-height:1;white-space:nowrap"
-              )}
-            >
+            <span style={css("font-family:var(--font-heading);font-size:clamp(22px,4vw,28px);line-height:1;white-space:nowrap")}>
               {amount}
             </span>
           </div>
-          <p
-            style={css(
-              "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
-            )}
-          >
-            Eight printed pieces every month, posted to your address. Postage is included. Payment
-            is handled by Razorpay &mdash; card, UPI, net banking or wallet.
+          <p style={{ ...muted, marginTop: "var(--space-3)" }}>
+            Eight printed pieces every month, posted to your address — nine in your first envelope,
+            which carries the Wanderland Passport. Postage is included. Payment is handled by
+            Razorpay &mdash; card, UPI, net banking or wallet.
           </p>
-          <p
-            style={css(
-              "font-size:13px;line-height:1.7;margin:var(--space-3) 0 0;color:color-mix(in srgb, var(--color-text) 68%, transparent)"
-            )}
-          >
-            Charged once, now. <strong>Nothing renews by itself</strong> &mdash; there is no
-            standing instruction on your card or UPI, so we cannot charge you again.
+          <p style={{ ...muted, marginTop: "var(--space-3)" }}>
+            Charged once, now. <strong>Nothing renews by itself</strong> &mdash; there is no standing
+            instruction on your card or UPI, so we cannot charge you again.
           </p>
         </div>
 
         {/* The terms have to be readable at the moment of paying, not buried
           * three clicks away, and the tick has to be the reader's own act. */}
-        <label
-          style={css(
-            "display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;line-height:1.65;padding:var(--space-3) var(--space-3) var(--space-3) var(--space-2)"
-          )}
-        >
+        <label style={css("display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;line-height:1.65")}>
           <input
             type="checkbox"
             checked={agreed}
@@ -706,75 +674,361 @@ export default function SubscribeForm({ onAddressChange, onSealed, onUnsealed })
               setAgreed(e.target.checked);
               if (e.target.checked) setFormError("");
             }}
-            style={css("width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-accent)")}
+            style={css("width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-accent-600)")}
           />
           {/* New tab, deliberately. A policy opened in this one would unmount
             * the form and lose an order that is paid for in the next click. */}
           <span>
             I have read and agree to the{" "}
-            <a href="/terms" target="_blank" rel="noreferrer noopener">
-              Terms &amp; Conditions
-            </a>
-            , the{" "}
-            <a href="/refunds" target="_blank" rel="noreferrer noopener">
-              Refunds &amp; Cancellation policy
-            </a>{" "}
-            and the{" "}
-            <a href="/shipping" target="_blank" rel="noreferrer noopener">
-              Shipping &amp; Delivery policy
-            </a>
-            , and to my address being used to post my envelopes as described in the{" "}
-            <a href="/privacy" target="_blank" rel="noreferrer noopener">
-              Privacy Policy
-            </a>
-            .
+            <a href="/terms" target="_blank" rel="noreferrer noopener">Terms &amp; Conditions</a>, the{" "}
+            <a href="/refunds" target="_blank" rel="noreferrer noopener">Refunds &amp; Cancellation policy</a> and the{" "}
+            <a href="/shipping" target="_blank" rel="noreferrer noopener">Shipping &amp; Delivery policy</a>, and to my
+            address being used to post my envelopes as described in the{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer noopener">Privacy Policy</a>.
           </span>
         </label>
 
         <Notice>{formError}</Notice>
 
-        <button className="btn btn-primary btn-block" type="button" disabled={busy || !agreed}
+        <button
+          className="btn btn-primary btn-block"
+          type="button"
+          disabled={busy || !agreed}
           onClick={openCheckout}
-          style={css("padding:13px 22px;font-size:15px;margin-top:var(--space-2)")}>
+          style={css("padding:15px 24px;font-size:16px;margin-top:0")}
+        >
           {busy ? "Opening…" : `Pay ${amount}`}
         </button>
-        <button className="btn btn-ghost" type="button" onClick={() => setStage("details")}
-          style={css("font-size:13px")}>
+        <button className="btn btn-ghost" type="button" onClick={() => setStage("form")} style={css("font-size:13px")}>
           &larr; Change my details
         </button>
       </div>
     );
   }
 
-  /* ── sealed ──────────────────────────────────────────────────────────── */
-  return (
-    <div
-      style={css(
-        "border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-neutral-100);animation-name:ldp-rise;animation-duration:.7s;animation-fill-mode:both;animation-timing-function:cubic-bezier(.2,.7,.2,1)"
-      )}
-    >
-      <div style={heading}>Your envelope is addressed.</div>
-      <hr className="hr" />
-      <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-        Iris has your address and your payment. Your envelope goes out with this month&rsquo;s
-        post, and your Wanderland Passport travels with it.
-      </p>
-      {subscription?.reference && (
+  /* ── sealed ────────────────────────────────────────────────────────── */
+  if (stage === "sealed") {
+    return (
+      <div
+        style={css(
+          "border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-neutral-200);animation:ldp-rise .7s cubic-bezier(.2,.7,.2,1) both"
+        )}
+      >
+        <div style={heading}>Your envelope is addressed.</div>
+        <hr className="hr" />
         <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-          Your reference is{" "}
-          <strong style={css("letter-spacing:.05em;font-feature-settings:'tnum'")}>
-            {subscription.reference}
-          </strong>
-          {" "}&mdash; keep it if you ever write to us about this order.
+          Iris has your address and your payment. Your envelope goes out with this month&rsquo;s post,
+          and your Wanderland Passport travels with it.
         </p>
+        {subscription?.reference && (
+          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
+            Your reference is{" "}
+            <strong style={css("letter-spacing:.05em;font-feature-settings:'tnum'")}>{subscription.reference}</strong>{" "}
+            &mdash; keep it if you ever write to us about this order.
+          </p>
+        )}
+        <p style={css("font-size:15px;line-height:1.8;margin:0")}>
+          Within India it takes up to a week from the day the post goes out.
+        </p>
+        <button className="btn btn-secondary" type="button" onClick={startOver} style={css("margin-top:var(--space-4)")}>
+          Address another
+        </button>
+      </div>
+    );
+  }
+
+  /* ── the form ──────────────────────────────────────────────────────── */
+  return (
+    <form onSubmit={submit} style={gap}>
+      <Stepper part={part} onGo={goTo} />
+
+      {/* Finding a form already filled in is unsettling if nothing says why.
+        * One line, and a way to wipe it. */}
+      {resumed && (
+        <Notice tone="info">
+          Picked up where you left off &mdash; this is kept in your browser only.{" "}
+          <button
+            type="button"
+            onClick={startOver}
+            style={css(
+              "background:none;border:0;padding:0;font:inherit;font-size:13px;color:var(--color-accent-700);text-decoration:underline;text-underline-offset:3px;cursor:pointer"
+            )}
+          >
+            Start fresh
+          </button>
+        </Notice>
       )}
-      <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-        It arrives in 1&ndash;3 weeks, depending on where you are.
-      </p>
-      <button className="btn btn-secondary" type="button" onClick={startOver}
-        style={css("margin-top:var(--space-4)")}>
-        Address another
-      </button>
-    </div>
+
+      {/* 1 ── the subscription ─────────────────────────────────────────── */}
+      {part === 1 && (
+      <Part first>
+        <Legend>1 &middot; Choose a subscription</Legend>
+        <p style={{ ...muted, margin: 0 }}>
+          Postage within India is included. A longer subscription is a better monthly rate, not a
+          different envelope.
+        </p>
+        <PlanPicker
+          pending={plansPending}
+          options={plans}
+          value={values.plan_months}
+          onChange={(m) => set("plan_months", m)}
+          error={fieldErrs.plan_months}
+        />
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={() => goTo(2)}
+          style={css("align-self:flex-start;padding:13px 24px;font-size:15px;margin-top:6px")}
+        >
+          Next: who it&rsquo;s for
+        </button>
+      </Part>
+      )}
+
+      {/* 2 ── who it is for ───────────────────────────────────────────── */}
+      {part === 2 && (
+        <Part first>
+          <Legend>2 &middot; Who is it for?</Legend>
+          <div style={twoUp}>
+            <Field id="ldp-first" label="First name" error={fieldErrs.first_name}>
+              <input
+                className="input" id="ldp-first" name="first_name" type="text" required
+                autoComplete="given-name" value={values.first_name} onChange={onChange} placeholder="Meera"
+              />
+            </Field>
+            <Field id="ldp-last" label="Last name" error={fieldErrs.last_name}>
+              <input
+                className="input" id="ldp-last" name="last_name" type="text" required
+                autoComplete="family-name" value={values.last_name} onChange={onChange} placeholder="Raghavan"
+              />
+            </Field>
+          </div>
+
+          <Field id="ldp-email" label="Email" error={fieldErrs.email}>
+            <input
+              className="input" id="ldp-email" name="email" type="email" required
+              autoComplete="email" value={values.email} onChange={onChange} placeholder="you@somewhere.com"
+            />
+          </Field>
+
+          <div style={twoUp}>
+            <div className="field">
+              <label htmlFor="ldp-phone">Phone</label>
+              {/* Two inputs, one field: the code is a short fixed thing and the
+                * number is the part that identifies somebody, so they are
+                * stored and compared separately. */}
+              <div style={css("display:grid;grid-template-columns:92px 1fr;gap:var(--space-2)")}>
+                <input
+                  className="input" name="phone_cc" type="text" required aria-label="Country code"
+                  value={values.phone_cc} onChange={onChange} placeholder="+91"
+                />
+                <input
+                  className="input" id="ldp-phone" name="phone_number" type="tel" required
+                  inputMode="numeric" autoComplete="tel-national" value={values.phone_number}
+                  onChange={onChange} placeholder="For delivery only"
+                />
+              </div>
+              {(fieldErrs.phone_cc || fieldErrs.phone_number) && (
+                <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>
+                  {fieldErrs.phone_cc || fieldErrs.phone_number}
+                </div>
+              )}
+            </div>
+            <Field
+              id="ldp-insta" label="Instagram" error={fieldErrs.instagram}
+              hint="So Iris knows who you are when she waves back."
+            >
+              <input
+                className="input" id="ldp-insta" name="instagram" type="text" required
+                value={values.instagram} onChange={onChange} placeholder="@yourhandle"
+              />
+            </Field>
+          </div>
+
+          <Field
+            id="ldp-bday" label="Birthday" error={fieldErrs.birthdate}
+            hint="Iris sends something extra on the day."
+          >
+            <input
+              className="input" id="ldp-bday" name="birthdate" type="date" required
+              max={new Date().toISOString().slice(0, 10)} value={values.birthdate} onChange={onChange}
+            />
+          </Field>
+
+          <div style={css("display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px")}>
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => advance("who", 3)}
+              style={css("padding:13px 24px;font-size:15px")}
+            >
+              Next: the address
+            </button>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={() => goTo(1)}
+              style={css("font-size:13px")}
+            >
+              &larr; Back to the subscription
+            </button>
+          </div>
+        </Part>
+      )}
+
+      {/* 3 ── where it goes ───────────────────────────────────────────── */}
+      {part === 3 && (
+        <Part first>
+          <Legend>3 &middot; Where does it go?</Legend>
+
+          <Field id="ldp-street" label="Street address" error={fieldErrs.address_line1}>
+            <input
+              className="input" id="ldp-street" name="address_line1" type="text" required
+              autoComplete="address-line1" value={values.address_line1} onChange={onChange}
+              placeholder="House or flat number and street"
+            />
+          </Field>
+          <Field id="ldp-area" label="Area, colony or apartment" optional error={fieldErrs.address_line2}>
+            <input
+              className="input" id="ldp-area" name="address_line2" type="text"
+              autoComplete="address-line2" value={values.address_line2} onChange={onChange}
+              placeholder="Sector, society, block"
+            />
+          </Field>
+          <Field id="ldp-landmark" label="Landmark" optional error={fieldErrs.landmark}>
+            <input
+              className="input" id="ldp-landmark" name="landmark" type="text"
+              value={values.landmark} onChange={onChange} placeholder="Near the old banyan tree"
+            />
+          </Field>
+
+          <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:var(--space-3)")}>
+            <Field id="ldp-city" label="City" error={fieldErrs.city}>
+              <input
+                className="input" id="ldp-city" name="city" type="text" required
+                autoComplete="address-level2" value={values.city} onChange={onChange} placeholder="Town or city"
+              />
+            </Field>
+            <Field id="ldp-pin" label="PIN code" error={fieldErrs.pincode}>
+              <input
+                className="input" id="ldp-pin" name="pincode" type="text" required inputMode="numeric"
+                pattern="[1-9][0-9]{5}" maxLength={6} autoComplete="postal-code" value={values.pincode}
+                onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="6 digits"
+              />
+            </Field>
+          </div>
+
+          <Field id="ldp-state" label="State" error={fieldErrs.state}>
+            <select
+              className="input" id="ldp-state" name="state" required autoComplete="address-level1"
+              value={values.state} onChange={onChange}
+            >
+              <option value="">Choose a state</option>
+              {STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+
+          <p style={{ ...muted, margin: 0 }}>
+            Delivery within India takes up to a week. We post within India only for the moment
+            &mdash; global shipping is being worked out, and if you are somewhere else you can{" "}
+            <a href="#global">ask to be told when it opens</a>.
+          </p>
+
+          {/* Not behind a toggle. These three are the ones that make the next
+            * letter better than the last, and a toggle is where they went to
+            * die. */}
+          <div
+            style={css(
+              "display:flex;flex-direction:column;gap:var(--space-3);margin-top:6px;padding:14px;border-radius:var(--radius-md);background:var(--color-accent-100)"
+            )}
+          >
+            {/* Written out rather than picked from a list. A row of tick-boxes
+              * only ever tells Iris which of her own suggestions a reader
+              * recognised; their own words say something she could not have
+              * guessed. */}
+            <Field
+              id="ldp-note" label="Anything you'd love a letter about?" optional
+              error={fieldErrs.interests_note} hint="It helps Iris choose what to write about next."
+            >
+              <textarea
+                className="input" id="ldp-note" name="interests_note" rows={3} maxLength={600}
+                value={values.interests_note} onChange={onChange}
+                placeholder="A place you love, a story you want"
+              />
+            </Field>
+            <Field
+              id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}
+              hint="It works from the number you signed up with."
+            >
+              {/* No placeholder: a code in grey text is a code being handed
+                * out. The people who have one already know what it says. */}
+              <input
+                className="input" id="ldp-code" name="promo_code" type="text" value={values.promo_code}
+                onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
+                style={css("letter-spacing:.06em")}
+              />
+            </Field>
+            <label className="radio" style={css("gap:10px;font-size:14px;min-height:44px")}>
+              <input
+                type="checkbox" checked={values.is_gift}
+                onChange={(e) => set("is_gift", e.target.checked)}
+                style={css(
+                  "position:static;opacity:1;width:18px;height:18px;pointer-events:auto;accent-color:var(--color-accent-600)"
+                )}
+              />
+              <span>This is a gift for somebody else</span>
+            </label>
+            {values.is_gift && (
+              <Field
+                id="ldp-gift" label="A line to go in with it" error={fieldErrs.gift_message}
+                hint="Iris copies it onto a card and tucks it into the first envelope."
+              >
+                <textarea
+                  className="input" id="ldp-gift" name="gift_message" rows={3} maxLength={600} required
+                  value={values.gift_message} onChange={onChange}
+                  placeholder="For Ammu, who reads everything twice — happy birthday."
+                />
+              </Field>
+            )}
+          </div>
+
+          {/* The DPDP Act wants the notice at the point the details are handed
+            * over, not only on a page somewhere else. Nothing is charged by
+            * this button, so it is a notice rather than a consent gate — the
+            * tick that authorises the purchase is on the next step. */}
+          <p style={muted}>
+            We use these details to address and post your envelope, and nothing else. We never see
+            your card or UPI details. See the{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer noopener">Privacy Policy</a>.
+          </p>
+
+          <Notice>{formError}</Notice>
+
+          <button
+            className="btn btn-primary btn-block" type="submit" disabled={busy}
+            style={css("padding:15px 24px;font-size:16px;margin-top:0")}
+          >
+            {busy ? "Just a moment…" : "Seal the envelope"}
+          </button>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => goTo(2)}
+            style={css("align-self:flex-start;font-size:13px")}
+          >
+            &larr; Back to who it&rsquo;s for
+          </button>
+          <p style={css("margin:0;font-size:12px;line-height:1.6;color:var(--color-neutral-600)")}>
+            Iris writes the address by hand, so please give it exactly as your post office likes it.
+            See <a href="/pricing">pricing</a> and <a href="/refunds">cancellations</a>.
+          </p>
+        </Part>
+      )}
+
+      {part < 3 && <Notice>{formError}</Notice>}
+    </form>
   );
 }

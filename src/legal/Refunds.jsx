@@ -5,6 +5,13 @@ import { business } from "../business.js";
 export default function Refunds() {
   const { window: win, international: intl } = business;
 
+  /* The worked example below is derived, not typed. A hardcoded total survives
+   * a price change looking perfectly plausible, which is the worst way for a
+   * refund policy to be wrong. */
+  const longest = business.plans[business.plans.length - 1];
+  const rateNumber = Number(longest.rate.replace(/[^0-9.]/g, ""));
+  const refundExample = `₹${((longest.months - 2) * rateNumber).toLocaleString("en-IN")}`;
+
   return (
     <LegalPage
       path="/refunds"
@@ -108,10 +115,11 @@ export default function Refunds() {
         paid — not a lower one, and not a recalculated one.
       </p>
       <p>
-        For example, on a six-month subscription at {business.plans[2].rate} a month (
-        {business.plans[2].total} in total), if you cancel after the second envelope has been
-        posted, four months remain unsent. You are refunded 4 × {business.plans[2].rate} ={" "}
-        <strong>₹1,200</strong>. The two envelopes already posted are not refunded.
+        For example, on a {longest.months}-month subscription at {longest.rate} a month (
+        {longest.total} in total), if you cancel after the second envelope has been posted,{" "}
+        {longest.months - 2} months remain unsent. You are refunded {longest.months - 2} ×{" "}
+        {longest.rate} = <strong>{refundExample}</strong>. The two envelopes already posted are not
+        refunded.
       </p>
       <p>
         If you used a discount code, the refund is worked out on the discounted rate you were

@@ -18,9 +18,12 @@ the API's origin — copy `.env.example` to `.env`.
 
 | Path | What it is |
 | --- | --- |
-| `src/main.jsx` | the route table — one landing page, seven policy pages, a 404 |
+| `src/main.jsx` | the route table — landing page, the letter, seven policy pages, a 404 |
 | `src/router.js` | the router itself: ~100 lines, no dependency |
 | `src/TheLittleDoorPost.jsx` | the landing page, including the `ENVELOPE` contents list |
+| `src/RedRace.jsx` | Door 1, The Red Race — the first letter, on its own page |
+| `src/GlobalWaitlist.jsx` | the "tell me when you post to my country" section |
+| `src/brand-tokens.css` | the 2026 redesign's palette and controls, layered over `styles.css` |
 | `src/SubscribeForm.jsx` | the four-stage sign-up flow and Razorpay Checkout |
 | `src/SiteFooter.jsx` | the footer, and `POLICIES` — the one list of policy pages |
 | `src/business.js` | **every legal and contact fact the policy pages state** |
@@ -31,6 +34,28 @@ the API's origin — copy `.env.example` to `.env`.
 | `src/styles.css` | Classical design-system tokens and classes |
 | `public/assets/` | the illustrations |
 | `vercel.json` | the SPA rewrite, so `/terms` works when typed directly |
+
+## Posting abroad — the waiting list
+
+Not open. The export process is still being set up, the `international` rows in
+the `plans` table are inactive, and `create_subscription` refuses a foreign
+address. `src/GlobalWaitlist.jsx` is what stands in for it: a section that sells
+nothing, takes no address, and records two things — an Instagram handle to
+write back to and a country to count.
+
+The country is the useful half. Opening a route is decided per country, so
+`GET /api/admin/international-interest` groups the list by country to say which
+one is worth the paperwork first.
+
+Everything the section states comes from `business.international`:
+`indicativeUsdPerLetter` (12, and labelled an estimate on the page because
+nothing can be sold at it yet), `setupDays` (10), and `excluded` — which the
+form mentions up front, so nobody in Dublin joins a list we have decided not to
+serve.
+
+The figure is mirrored by `INTERNATIONAL_INDICATIVE_USD` in
+`backend/app/routers/subscriptions.py`, which serves it on `/api/config`.
+Change one, change the other.
 
 ## The policy pages
 
@@ -144,6 +169,44 @@ sidebar and the see-also list on every policy page.
 
 ## The sign-up flow
 
+One part on screen at a time — plan, then who, then where — each replacing the
+last in the same panel rather than being appended below it. Three parts open at
+once made a very long page on a phone and walked the sign-up button further
+down it with every answer.
+
+Nothing typed is lost by that: all three parts read and write one `values`
+object held by `SubscribeForm`, so a part that is off screen still has its
+answers, and coming back to it re-renders them. Going back is offered twice
+over — a Back button on parts two and three, and the numbered steps along the
+top, where any part already completed is a link to it.
+
+**The half-filled form is kept in `localStorage`** under `ldp.signup.draft.v1`
+— a sign-up asks for a full postal address and posts it to an API that sleeps,
+so losing all of it to a reload or a first attempt that had to be retried is a
+small disaster. It is written as they type, restored into the very first render
+(lazily, so no empty-form flash), cleared the moment a sign-up completes, and
+expires after seven days. Every call is wrapped: `localStorage` throws outright
+in some private modes, and a draft must never be why a form breaks. When a
+draft is picked up the form says so and offers *Start fresh* — a form that
+fills itself in with no explanation is unsettling.
+
+**There is no up-front "the API is slow" banner.** It only worried people
+before they had typed anything. A sign-up that fails because the server did not
+answer — status 0, or 5xx — says so at the moment it happens and asks for
+another go in a few seconds, which is about how long the free-tier API takes to
+wake. Anything the reader actually needs to fix still shows the server's own
+message. See `sendingMessage`.
+
+`PlanPicker` never renders nothing. It has three states: a skeleton while
+`/api/config` is in flight, the live rate card once it lands, and — if the API
+cannot be reached at all — the `plans` mirror in `business.js`. It used to
+return `null` on an empty list, which left "Choose a subscription" standing
+over blank space whenever the free-tier API was asleep, with a Next button that
+still went through on the default of one month. The fallback is safe because
+the amount actually charged is computed server-side from the `plans` table and
+shown again on the pay step before anything is taken.
+
+
 `region → details → pay → sealed`, with readers outside India going
 `region → waitlisted` instead (there is no international shipping yet).
 
@@ -183,6 +246,12 @@ Two other copies have to agree with it: `ENVELOPE_CONTENTS` in the backend
 (`backend/app/routers/subscriptions.py`, served from `/api/config`), and
 `contents` in `src/business.js`, which the Terms and Pricing pages print.
 Change one, change all three.
+
+**Eight a month, not nine.** The Wanderland Passport goes out once, with a
+first envelope, so it is deliberately *not* in `contents` — it lives in
+`business.firstEnvelopeExtra` and `FIRST_ENVELOPE_EXTRA` in the backend, and
+the policy pages name it in its own sentence. Folding it into the monthly list
+would have the Terms page promise a passport in every envelope.
 
 This is not housekeeping. Naming the printed goods is what keeps the business
 in a category Razorpay supports — see **The policy pages** above.

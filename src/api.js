@@ -117,10 +117,14 @@ export const warmUp = () => {
   getConfig().catch(() => {});
 };
 
-/* "Tell me when sign-ups open." Not retried: asking twice is harmless on the
- * server, but a silent second attempt is not worth the request. */
-export const requestReminder = (payload) =>
-  request("/reminders", { method: "POST", body: payload });
+/* "Tell me when you post to my country."
+ *
+ * Not retried. The endpoint is idempotent — the handle is the key, so asking
+ * twice updates one row rather than making two — but a dropped reply is worth
+ * showing rather than silently papering over, because the reader wants to know
+ * they are actually on the list. */
+export const registerInternationalInterest = (payload) =>
+  request("/international-interest", { method: "POST", body: payload });
 
 export const createSubscription = (payload) =>
   request("/subscriptions", { method: "POST", body: payload });

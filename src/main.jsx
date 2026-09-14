@@ -1,9 +1,13 @@
 import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+/* The redesign's tokens, layered over the component sheet above. See the file
+ * header — fold it into styles.css if you would rather keep one stylesheet. */
+import "./brand-tokens.css";
 import { warmUp } from "./api.js";
 import { usePath, useScrollOnNavigate, interceptLinks } from "./router.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
+import RedRace from "./RedRace.jsx";
 import Terms from "./legal/Terms.jsx";
 import Privacy from "./legal/Privacy.jsx";
 import Refunds from "./legal/Refunds.jsx";
@@ -13,13 +17,14 @@ import Contact from "./legal/Contact.jsx";
 import Grievance from "./legal/Grievance.jsx";
 import NotFound from "./legal/NotFound.jsx";
 
-/* One landing page and seven policy pages. The router is ours and lives in
- * router.js — 100 lines, no dependency, and no more than this needs.
+/* One landing page, one letter, and seven policy pages. The router is ours and
+ * lives in router.js — 100 lines, no dependency, and no more than this needs.
  *
  * Anchors like #subscribe are still left to the browser, which scrolls to them
  * without any help from us. */
 const ROUTES = {
   "/": TheLittleDoorPost,
+  "/red-race": RedRace,
   "/terms": Terms,
   "/privacy": Privacy,
   "/refunds": Refunds,

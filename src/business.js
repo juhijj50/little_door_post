@@ -82,10 +82,20 @@ export const business = {
     "a die-cut vinyl character sticker",
     "an illustrated art print on card",
     "an activity sheet, one printed page",
-    "a fact sheet on what inspired the letter, one printed page",
+    "a folded zine of that month's traditions, with a small keepsake tucked inside",
     "a printed paper stamp of that month's town",
   ],
   piecesPerMonth: 8,
+
+  /* Sent once, with a first envelope only — deliberately NOT in `contents`
+   * above, which is the list of what arrives every month. The policy pages
+   * name it separately for exactly that reason. */
+  firstEnvelopeExtra: {
+    name: "a Wanderland Passport",
+    detail:
+      "a stapled booklet with a page for every door, and somewhere to paste the " +
+      "stamp that comes with each letter",
+  },
 
   /* ── the rate card ───────────────────────────────────────────────────── */
   /* The prices actually charged live in the `plans` table in Postgres, which
@@ -97,9 +107,9 @@ export const business = {
    * below first — the number wants a few percent in it that the India rates
    * do not need. */
   plans: [
-    { months: 1, rate: "₹370", total: "₹370", note: "one envelope" },
-    { months: 3, rate: "₹330", total: "₹990", note: "three envelopes, one a month" },
-    { months: 6, rate: "₹300", total: "₹1,800", note: "six envelopes, one a month" },
+    { months: 1, rate: "₹375", total: "₹375", note: "one envelope" },
+    { months: 3, rate: "₹345", total: "₹1,035", note: "three envelopes, one a month" },
+    { months: 6, rate: "₹315", total: "₹1,890", note: "six envelopes, one a month" },
   ],
   currency: "INR",
 
@@ -107,7 +117,7 @@ export const business = {
   /* The same 15th-to-5th window the backend enforces in app/cycles.py. */
   window: { opensDay: "15th", closesDay: "5th" },
   dispatchWindow: "within 10 days of the 5th",
-  deliveryEstimate: "1 to 3 weeks from dispatch",
+  deliveryEstimate: "up to a week from dispatch",
   shipsTo: "India only",
 
   /* ── posting abroad ──────────────────────────────────────────────────── */
@@ -140,6 +150,26 @@ export const business = {
      * norm for postal goods (DDU) and is what we can actually operate: we
      * cannot pre-pay duty in 190 countries from Gandhinagar. */
     dutiesBorneBy: "recipient",
+
+    /*  What a letter abroad is expected to cost, in US dollars.
+     *
+     *  INDICATIVE, and said so wherever it is shown. The export process is
+     *  still being set up and nothing can be sold at this figure yet — the
+     *  `international` rows in the plans table are still inactive. It is
+     *  published so that nobody joins the waiting list imagining the India
+     *  price and then meets this one.
+     *
+     *  Mirrors INTERNATIONAL_INDICATIVE_USD in
+     *  backend/app/routers/subscriptions.py, which serves it on /api/config.
+     *  Change one, change the other. When the real rates are set, they go in
+     *  the plans table and this can go. */
+    indicativeUsdPerLetter: 12,
+
+    /*  Roughly how long the export paperwork is expected to take, told to
+     *  people on the waiting list. Deliberately hedged on the page — it is a
+     *  process with a government in it, and a date promised here is a date
+     *  somebody holds us to. */
+    setupDays: 10,
 
     /*  ── the risk margin ────────────────────────────────────────────────
      *

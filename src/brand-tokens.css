@@ -1,0 +1,142 @@
+/*  Brand tokens for the 2026 redesign.
+ *
+ *  styles.css still carries the component layer (.btn, .input, .field, .radio,
+ *  .card …) and is unchanged. This file only retunes the variables those
+ *  classes read, plus the three component rules the redesign genuinely changes:
+ *  a solid primary button, pill controls, and rounder containers.
+ *
+ *  Imported after styles.css in main.jsx. If you would rather keep one
+ *  stylesheet, paste the :root block over the one in styles.css and delete
+ *  this file — nothing else references it.
+ */
+
+:root {
+  /* Sage envelope, cream paper, periwinkle door, warm ink brown. */
+  --color-bg: #f8f3e8;
+  --color-surface: #fffdf7;
+  --color-text: #3a3128;
+  --color-accent: #86955c;
+  --color-accent-2: #7d8ec9;
+  --color-divider: #e7dcc6;
+
+  --color-neutral-100: #fffdf7;
+  --color-neutral-200: #f7f1e3;
+  --color-neutral-300: #e7dcc6;
+  --color-neutral-400: #d3c7ae;
+  --color-neutral-500: #b3a58a;
+  --color-neutral-600: #8d8068;
+  --color-neutral-700: #6a5f4c;
+  --color-neutral-800: #4a4235;
+  --color-neutral-900: #322c23;
+
+  --color-accent-100: #eef1e2;
+  --color-accent-200: #dde3c6;
+  --color-accent-300: #c4cd9f;
+  --color-accent-400: #a6b27a;
+  --color-accent-500: #86955c;
+  --color-accent-600: #6b7a46;
+  --color-accent-700: #545f36;
+  --color-accent-800: #3e4728;
+  --color-accent-900: #2b3220;
+
+  --color-accent-2-100: #eef0fa;
+  --color-accent-2-200: #dbe1f4;
+  --color-accent-2-300: #bcc7e9;
+  --color-accent-2-400: #9aa9da;
+  --color-accent-2-500: #7d8ec9;
+  --color-accent-2-600: #6274b3;
+  --color-accent-2-700: #4d5c93;
+  --color-accent-2-800: #3a4671;
+  --color-accent-2-900: #2a3352;
+
+  /* Cormorant Garamond over Lora, as before — the weights are what changed. */
+  --font-heading: "Cormorant Garamond", Georgia, serif;
+  --font-heading-weight: 600;
+  --font-body: "Lora", Georgia, serif;
+
+  --radius-sm: 3px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(58, 49, 40, 0.12);
+  --shadow-md: 0 6px 18px rgba(58, 49, 40, 0.14);
+  --shadow-lg: 0 18px 44px rgba(58, 49, 40, 0.2);
+}
+
+/* The primary action is now a filled button rather than an outlined one: on a
+ * cream ground the outline read as secondary next to the photographs. */
+.btn-primary {
+  color: var(--color-neutral-100);
+  background: var(--color-accent-600);
+  border-color: var(--color-accent-600);
+}
+.btn-primary:hover {
+  background: var(--color-accent-700);
+  border-color: var(--color-accent-700);
+}
+.btn-primary:active {
+  background: var(--color-accent-800);
+  border-color: var(--color-accent-800);
+}
+
+/* Rounder frame, and a 46px minimum so every control clears a thumb. */
+.btn,
+.input {
+  border-radius: 999px;
+}
+.btn {
+  min-height: 46px;
+}
+.input {
+  min-height: 46px;
+  padding-inline: 14px;
+  background: var(--color-neutral-100);
+}
+.card,
+.dialog {
+  border-radius: var(--radius-lg);
+}
+
+a {
+  color: var(--color-accent-700);
+}
+a:hover {
+  color: var(--color-accent-600);
+}
+
+@keyframes ldp-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ldp-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes ldp-hero {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ldp-float {
+  from { transform: translateY(6px) rotate(-1.2deg); }
+  to { transform: translateY(-10px) rotate(1.2deg); }
+}
+@keyframes ldp-sway {
+  from { transform: translateY(4px) rotate(1deg); }
+  to { transform: translateY(-8px) rotate(-1deg); }
+}
+@keyframes ldp-bloom {
+  from { opacity: 0.25; transform: translate(-50%, -50%) scale(0.9); }
+  to { opacity: 0.6; transform: translate(-50%, -50%) scale(1.08); }
+}
+@keyframes ldp-twinkle {
+  0%, 100% { opacity: 0.14; transform: scale(0.6); }
+  50% { opacity: 0.9; transform: scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.001s !important;
+  }
+}
