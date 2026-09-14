@@ -23,7 +23,7 @@ export default function RedRace() {
         <div style={css("width:min(1180px,100%);margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px clamp(14px,4vw,40px)")}>
           <a href="/" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
             <img
-              src="/assets/logo-round.png"
+              src="/assets/logo-round.webp"
               alt=""
               style={css("width:clamp(34px,7vw,42px);height:clamp(34px,7vw,42px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)")}
             />

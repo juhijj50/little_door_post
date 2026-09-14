@@ -39,25 +39,25 @@ const ENVELOPE = [
  * screen, two columns on a phone — the grid below does that without a media
  * query, and every tile is the same 3:4 so no row goes ragged. */
 const GALLERY = [
-  ["/assets/gallery-white-stack.jpg", "A stack of white envelopes printed with the blue door and the Little Door Post wordmark"],
-  ["/assets/gallery-green-seals.jpg", "Sage-green envelopes with painted door cards and pressed wax seals"],
-  ["/assets/gallery-addressed.jpg", "Green and white envelopes addressed by hand, stamped with strawberries and little doors"],
-  ["/assets/gallery-sunlit-nook.jpg", "The Sunlit Nook edition laid out: letters, a recipe, a to-do list and mushroom and flower stickers"],
-  ["/assets/gallery-lanterns.jpg", "The Land of Lanterns letters, bordered with pumpkins, ghosts and black cats"],
-  ["/assets/gallery-mayor-prints.jpg", "Art prints of the Mayor in his lantern-lit street, fanned out in a stack"],
-  ["/assets/gallery-red-race.jpg", "The Red Race envelope opened out: the letter, sticker sheets, wax seals, a colouring page and thank-you notes"],
-  ["/assets/gallery-butterfly-seal.jpg", "A white envelope closed with a butterfly wax seal, held over a pot of yellow chrysanthemums"],
-  ["/assets/gallery-packing.jpg", "Coloured paper envelopes, handwritten notes, sunflower stickers and sticker books laid out for packing"],
-  ["/assets/gallery-sketchbook.jpg", "A sketchbook open to a drawing of Iris in her yellow cardigan, propped up on a desk"],
+  ["/assets/gallery-white-stack.webp", "A stack of white envelopes printed with the blue door and the Little Door Post wordmark"],
+  ["/assets/gallery-green-seals.webp", "Sage-green envelopes with painted door cards and pressed wax seals"],
+  ["/assets/gallery-addressed.webp", "Green and white envelopes addressed by hand, stamped with strawberries and little doors"],
+  ["/assets/gallery-sunlit-nook.webp", "The Sunlit Nook edition laid out: letters, a recipe, a to-do list and mushroom and flower stickers"],
+  ["/assets/gallery-lanterns.webp", "The Land of Lanterns letters, bordered with pumpkins, ghosts and black cats"],
+  ["/assets/gallery-mayor-prints.webp", "Art prints of the Mayor in his lantern-lit street, fanned out in a stack"],
+  ["/assets/gallery-red-race.webp", "The Red Race envelope opened out: the letter, sticker sheets, wax seals, a colouring page and thank-you notes"],
+  ["/assets/gallery-butterfly-seal.webp", "A white envelope closed with a butterfly wax seal, held over a pot of yellow chrysanthemums"],
+  ["/assets/gallery-packing.webp", "Coloured paper envelopes, handwritten notes, sunflower stickers and sticker books laid out for packing"],
+  ["/assets/gallery-sketchbook.webp", "A sketchbook open to a drawing of Iris in her yellow cardigan, propped up on a desk"],
 ];
 
 /* This month's three. They stand together on one baseline — the heights differ
  * on purpose, they are different people — and carry nothing but their names:
  * the letter is where they get to speak. */
 const FOLK = [
-  ["/assets/mayor-folk.png", "Mr. Drumstring, a ghost in a top hat and green coat wearing a Mayor's rosette", "33%", "clamp(168px,27vw,320px)"],
-  ["/assets/witch.png", "Martha, a ghost in a wide hat and ribboned skirts carrying a book and a satchel", "30%", "clamp(180px,29vw,344px)"],
-  ["/assets/moondog.png", "Mistling, a cream-and-blue hound with flowering branches for antlers and a moon charm", "31%", "clamp(150px,24vw,284px)"],
+  ["/assets/mayor-folk.webp", "Mr. Drumstring, a ghost in a top hat and green coat wearing a Mayor's rosette", "33%", "clamp(168px,27vw,320px)"],
+  ["/assets/witch.webp", "Martha, a ghost in a wide hat and ribboned skirts carrying a book and a satchel", "30%", "clamp(180px,29vw,344px)"],
+  ["/assets/moondog.webp", "Mistling, a cream-and-blue hound with flowering branches for antlers and a moon charm", "31%", "clamp(150px,24vw,284px)"],
 ];
 
 const FOLK_NAMES = ["Mr. Drumstring", "Martha", "Mistling"];
@@ -105,7 +105,7 @@ export default function TheLittleDoorPost() {
         >
           <a href="/" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
             <img
-              src="/assets/logo-round.png"
+              src="/assets/logo-round.webp"
               alt=""
               style={css(
                 "width:clamp(36px,8vw,44px);height:clamp(36px,8vw,44px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
@@ -306,7 +306,7 @@ export default function TheLittleDoorPost() {
             </div>
             <div style={css("display:flex;justify-content:center")}>
               <img
-                src="/assets/envelope-white.png"
+                src="/assets/envelope-white.webp"
                 alt="A white envelope with a painted blue door, wildflowers, butterflies and a pearl wax seal"
                 style={css("width:min(470px,92%);filter:drop-shadow(0 20px 32px rgba(58,49,40,.18));animation:ldp-float 9s ease-in-out infinite alternate")}
               />
@@ -439,7 +439,7 @@ export default function TheLittleDoorPost() {
       <section id="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
         <div style={css("position:absolute;inset:0;pointer-events:none")}>
           <img
-            src="/assets/gallery-green-seals.jpg"
+            src="/assets/gallery-green-seals.webp"
             alt=""
             style={css("width:100%;height:100%;object-fit:cover;filter:saturate(.62) brightness(1.06)")}
           />
