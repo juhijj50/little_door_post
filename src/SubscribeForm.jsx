@@ -103,6 +103,45 @@ const clearDraft = () => {
   }
 };
 
+/*  A payment that has gone through, kept so a reload shows it.
+ *
+ *  Without this, refreshing the page after paying put an empty sign-up form
+ *  back in front of somebody who had just paid — which reads exactly like the
+ *  payment did not happen. Only what the confirmation shows is kept: the two
+ *  IDs, the amount and the length. No name, no address.
+ */
+const DONE_KEY = "ldp.signup.done.v1";
+
+const readDone = () => {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(DONE_KEY) || "null");
+    if (!saved?.reference || Date.now() - (saved.savedAt || 0) > DRAFT_TTL_MS) {
+      window.localStorage.removeItem(DONE_KEY);
+      return null;
+    }
+    return saved;
+  } catch {
+    return null;
+  }
+};
+
+const writeDone = (done) => {
+  try {
+    window.localStorage.setItem(DONE_KEY, JSON.stringify({ ...done, savedAt: Date.now() }));
+  } catch {
+    /* Private mode: the confirmation still shows now, it just will not
+     * survive a reload. */
+  }
+};
+
+const clearDone = () => {
+  try {
+    window.localStorage.removeItem(DONE_KEY);
+  } catch {
+    /* As above. */
+  }
+};
+
 /* Worth remembering only once there is something in it. Landing on the page,
  * touching nothing and leaving should not leave a draft behind. */
 const worthSaving = (values) =>
@@ -316,6 +355,15 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
   );
 };
 
+/* "2026-10" -> "October 2026". The cycle key is how the database files a
+ * month, and it was being shown to readers as-is. */
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+  "August", "September", "October", "November", "December"];
+const monthName = (cycle) => {
+  const [y, m] = String(cycle || "").split("-").map(Number);
+  return y && m >= 1 && m <= 12 ? `${MONTHS[m - 1]} ${y}` : cycle || "";
+};
+
 /*  What to say when a sign-up will not send.
  *
  *  Two different situations wearing the same shape. Something wrong with what
@@ -334,6 +382,20 @@ const sendingMessage = (err) =>
   WAKING.has(err?.status)
     ? "The sign-up desk is just waking up. Everything you have typed is safe — please press the button again in a few seconds."
     : err?.message || "Something went wrong. Try again in a moment.";
+
+/* One ID on the confirmation, with what it is for. */
+const IdRow = ({ label, value, hint }) =>
+  !value ? null : (
+    <div style={css("padding:12px 14px;border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);background:var(--color-neutral-100)")}>
+      <div style={css("font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-600)")}>
+        {label}
+      </div>
+      <div style={css("font-size:16px;letter-spacing:.03em;margin-top:3px;font-feature-settings:'tnum';overflow-wrap:anywhere")}>
+        {value}
+      </div>
+      <div style={css("font-size:12px;line-height:1.5;margin-top:3px;color:var(--color-neutral-600)")}>{hint}</div>
+    </div>
+  );
 
 const Notice = ({ tone = "error", children }) =>
   !children ? null : (
@@ -364,7 +426,8 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
   /* Which part is on screen. One at a time; the stepper and the Back buttons
    * move it in both directions. */
   const [part, setPart] = useState(() => restored?.part || 1);
-  const [stage, setStage] = useState("form"); // form | pay | sealed
+  const [done, setDone] = useState(readDone);
+  const [stage, setStage] = useState(() => (done ? "sealed" : "form")); // form | pay | sealed
   const [values, setValues] = useState(() => restored?.values || EMPTY);
   const [fieldErrs, setFieldErrs] = useState({});
   const [formError, setFormError] = useState("");
@@ -454,6 +517,8 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
 
   const startOver = () => {
     clearDraft();
+    clearDone();
+    setDone(null);
     setResumed(false);
     setPart(1);
     setStage("form");
@@ -558,6 +623,19 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               razorpay_signature: response.razorpay_signature,
             });
             setSubscription(result.subscription);
+            /* Two IDs, and both are real. Razorpay's pay_… identifies the money
+             * moving; our LDP-… identifies the subscription it bought. A reader
+             * matching this page against their bank or UPI app is looking for
+             * the first, so it is shown first. */
+            const record = {
+              paymentId: response.razorpay_payment_id,
+              reference: result.subscription?.reference || subscription.reference,
+              amount: result.subscription?.amount_display || subscription.amount_display,
+              months: result.subscription?.plan_months || subscription.plan_months,
+              cycle: result.subscription?.cycle || subscription.cycle,
+            };
+            writeDone(record);
+            setDone(record);
             clearDraft();
             setStage("sealed");
             onSealed?.();
@@ -635,38 +713,41 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       );
     }
 
+    /* Short on purpose. This screen used to carry three paragraphs and a
+     * four-policy sentence, and a reader about to pay does not read three
+     * paragraphs — they scroll past them, which is worse than not having them.
+     *
+     * What must stay, stays: the box is unticked and theirs to tick (the
+     * E-Commerce Rules forbid pre-ticked consent), the policies that govern
+     * the purchase are one tap away, and "charged once" is said plainly
+     * because it is the thing people actually worry about. The privacy notice
+     * was given on the step that collected the details. */
     return (
       <div style={gap}>
         <div style={panel}>
-          <h3 style={heading}>One last step.</h3>
+          <h3 style={heading}>Review and pay</h3>
           <hr className="hr" />
           <div
             style={css(
-              "display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding-bottom:var(--space-3);border-bottom:1px solid var(--color-neutral-300)"
+              "display:flex;align-items:baseline;justify-content:space-between;gap:16px"
             )}
           >
-            <span style={css("font-size:15px;line-height:1.6")}>
-              {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"} &mdash; from{" "}
-              {subscription.cycle}
+            <span style={css("font-size:15px;line-height:1.5")}>
+              {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"}
+              <span style={css("display:block;font-size:13px;color:var(--color-neutral-600)")}>
+                Starts with the {monthName(subscription.cycle)} letter
+              </span>
             </span>
-            <span style={css("font-family:var(--font-heading);font-size:clamp(22px,4vw,28px);line-height:1;white-space:nowrap")}>
+            <span style={css("font-family:var(--font-heading);font-size:clamp(24px,4.4vw,30px);line-height:1;white-space:nowrap")}>
               {amount}
             </span>
           </div>
-          <p style={{ ...muted, marginTop: "var(--space-3)" }}>
-            Eight printed pieces every month, posted to your address — nine in your first envelope,
-            which carries the Wanderland Passport. Postage is included. Payment is handled by
-            Razorpay &mdash; card, UPI, net banking or wallet.
-          </p>
-          <p style={{ ...muted, marginTop: "var(--space-3)" }}>
-            Charged once, now. <strong>Nothing renews by itself</strong> &mdash; there is no standing
-            instruction on your card or UPI, so we cannot charge you again.
+          <p style={{ ...muted, marginTop: "var(--space-3)", marginBottom: 0 }}>
+            Postage included &middot; charged once, never renewed automatically.
           </p>
         </div>
 
-        {/* The terms have to be readable at the moment of paying, not buried
-          * three clicks away, and the tick has to be the reader's own act. */}
-        <label style={css("display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;line-height:1.65")}>
+        <label style={css("display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;line-height:1.6")}>
           <input
             type="checkbox"
             checked={agreed}
@@ -674,17 +755,15 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               setAgreed(e.target.checked);
               if (e.target.checked) setFormError("");
             }}
-            style={css("width:16px;height:16px;margin-top:2px;flex:none;accent-color:var(--color-accent-600)")}
+            style={css("width:18px;height:18px;margin-top:1px;flex:none;accent-color:var(--color-accent-600)")}
           />
-          {/* New tab, deliberately. A policy opened in this one would unmount
-            * the form and lose an order that is paid for in the next click. */}
+          {/* New tab, deliberately: a policy opened in this one would unmount
+            * the form a click before payment. */}
           <span>
-            I have read and agree to the{" "}
-            <a href="/terms" target="_blank" rel="noreferrer noopener">Terms &amp; Conditions</a>, the{" "}
-            <a href="/refunds" target="_blank" rel="noreferrer noopener">Refunds &amp; Cancellation policy</a> and the{" "}
-            <a href="/shipping" target="_blank" rel="noreferrer noopener">Shipping &amp; Delivery policy</a>, and to my
-            address being used to post my envelopes as described in the{" "}
-            <a href="/privacy" target="_blank" rel="noreferrer noopener">Privacy Policy</a>.
+            I agree to the{" "}
+            <a href="/terms" target="_blank" rel="noreferrer noopener">Terms</a>,{" "}
+            <a href="/refunds" target="_blank" rel="noreferrer noopener">refund</a> and{" "}
+            <a href="/shipping" target="_blank" rel="noreferrer noopener">shipping</a> policies.
           </span>
         </label>
 
@@ -708,30 +787,49 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
 
   /* ── sealed ────────────────────────────────────────────────────────── */
   if (stage === "sealed") {
+    const paid = done || {
+      reference: subscription?.reference,
+      amount: subscription?.amount_display,
+      months: subscription?.plan_months,
+      cycle: subscription?.cycle,
+    };
+
     return (
       <div
         style={css(
-          "border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-neutral-200);animation:ldp-rise .7s cubic-bezier(.2,.7,.2,1) both"
+          "border:1px solid var(--color-accent-300);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-accent-100);animation:ldp-rise .7s cubic-bezier(.2,.7,.2,1) both"
         )}
       >
-        <div style={heading}>Your envelope is addressed.</div>
-        <hr className="hr" />
-        <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-          Iris has your address and your payment. Your envelope goes out with this month&rsquo;s post,
-          and your Wanderland Passport travels with it.
+        <div style={css("display:flex;align-items:center;gap:10px")}>
+          <span
+            aria-hidden="true"
+            style={css("display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--color-accent-600);color:#fff;font-size:17px;flex:none")}
+          >
+            &#10003;
+          </span>
+          <div style={heading}>Payment done</div>
+        </div>
+        <p style={css("font-size:15px;line-height:1.7;margin:var(--space-3) 0")}>
+          {paid.amount ? <><strong>{paid.amount}</strong> paid for </> : "Paid for "}
+          {paid.months} {paid.months === 1 ? "month" : "months"}. Your first letter goes out with the{" "}
+          {monthName(paid.cycle)} post.
         </p>
-        {subscription?.reference && (
-          <p style={css("font-size:15px;line-height:1.8;margin-bottom:var(--space-3)")}>
-            Your reference is{" "}
-            <strong style={css("letter-spacing:.05em;font-feature-settings:'tnum'")}>{subscription.reference}</strong>{" "}
-            &mdash; keep it if you ever write to us about this order.
-          </p>
-        )}
-        <p style={css("font-size:15px;line-height:1.8;margin:0")}>
-          Within India it takes up to a week from the day the post goes out.
-        </p>
+
+        <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")}>
+          <IdRow
+            label="Payment ID"
+            value={paid.paymentId}
+            hint="From Razorpay — the one your bank or UPI app shows."
+          />
+          <IdRow
+            label="Order reference"
+            value={paid.reference}
+            hint="Ours — quote it if you write to us."
+          />
+        </div>
+
         <button className="btn btn-secondary" type="button" onClick={startOver} style={css("margin-top:var(--space-4)")}>
-          Address another
+          Subscribe someone else
         </button>
       </div>
     );
@@ -811,13 +909,16 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             />
           </Field>
 
-          <div style={twoUp}>
-            <div className="field">
+          {/* The phone has a row to itself. Sharing one with Instagram gave it
+            * half the width on a phone, and it then spent 92px of that half on
+            * "+91" — leaving the number itself too narrow to show ten digits. */}
+          <div className="field">
               <label htmlFor="ldp-phone">Phone</label>
               {/* Two inputs, one field: the code is a short fixed thing and the
                 * number is the part that identifies somebody, so they are
-                * stored and compared separately. */}
-              <div style={css("display:grid;grid-template-columns:92px 1fr;gap:var(--space-2)")}>
+                * stored and compared separately. The code box is sized for
+                * "+91" and no wider; every spare pixel goes to the number. */}
+              <div style={css("display:grid;grid-template-columns:4.6em minmax(0,1fr);gap:var(--space-2)")}>
                 <input
                   className="input" name="phone_cc" type="text" required aria-label="Country code"
                   value={values.phone_cc} onChange={onChange} placeholder="+91"
@@ -825,15 +926,22 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 <input
                   className="input" id="ldp-phone" name="phone_number" type="tel" required
                   inputMode="numeric" autoComplete="tel-national" value={values.phone_number}
-                  onChange={onChange} placeholder="For delivery only"
+                  onChange={onChange} placeholder="98765 43210"
+                  style={css("letter-spacing:.02em;font-feature-settings:'tnum'")}
                 />
               </div>
-              {(fieldErrs.phone_cc || fieldErrs.phone_number) && (
+              {(fieldErrs.phone_cc || fieldErrs.phone_number) ? (
                 <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:#b3312f")}>
                   {fieldErrs.phone_cc || fieldErrs.phone_number}
                 </div>
+              ) : (
+                <div style={css("font-size:11px;line-height:1.5;margin-top:4px;color:var(--color-neutral-600)")}>
+                  For delivery only &mdash; couriers call before they come.
+                </div>
               )}
-            </div>
+          </div>
+
+          <div style={twoUp}>
             <Field
               id="ldp-insta" label="Instagram" error={fieldErrs.instagram}
               hint="So Iris knows who you are when she waves back."
@@ -843,17 +951,16 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 value={values.instagram} onChange={onChange} placeholder="@yourhandle"
               />
             </Field>
+            <Field
+              id="ldp-bday" label="Birthday" error={fieldErrs.birthdate}
+              hint="Iris sends something extra on the day."
+            >
+              <input
+                className="input" id="ldp-bday" name="birthdate" type="date" required
+                max={new Date().toISOString().slice(0, 10)} value={values.birthdate} onChange={onChange}
+              />
+            </Field>
           </div>
-
-          <Field
-            id="ldp-bday" label="Birthday" error={fieldErrs.birthdate}
-            hint="Iris sends something extra on the day."
-          >
-            <input
-              className="input" id="ldp-bday" name="birthdate" type="date" required
-              max={new Date().toISOString().slice(0, 10)} value={values.birthdate} onChange={onChange}
-            />
-          </Field>
 
           <div style={css("display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px")}>
             <button
