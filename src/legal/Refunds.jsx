@@ -7,8 +7,14 @@ export default function Refunds() {
 
   /* The worked example below is derived, not typed. A hardcoded total survives
    * a price change looking perfectly plausible, which is the worst way for a
-   * refund policy to be wrong. */
+   * refund policy to be wrong.
+   *
+   * It needs a plan long enough to have months left after two have gone out.
+   * While only the single month is on sale there is no such plan, and an
+   * example about cancelling a one-month subscription part way through would
+   * be nonsense — so the paragraph steps aside until a longer plan returns. */
   const longest = business.plans[business.plans.length - 1];
+  const canWorkExample = longest.months > 2;
   const rateNumber = Number(longest.rate.replace(/[^0-9.]/g, ""));
   const refundExample = `₹${((longest.months - 2) * rateNumber).toLocaleString("en-IN")}`;
 
@@ -114,6 +120,7 @@ export default function Refunds() {
         A subscription is priced as a monthly rate, and the refund uses the same rate you actually
         paid — not a lower one, and not a recalculated one.
       </p>
+      {canWorkExample ? (
       <p>
         For example, on a {longest.months}-month subscription at {longest.rate} a month (
         {longest.total} in total), if you cancel after the second envelope has been posted,{" "}
@@ -121,6 +128,13 @@ export default function Refunds() {
         {longest.rate} = <strong>{refundExample}</strong>. The two envelopes already posted are not
         refunded.
       </p>
+      ) : (
+      <p>
+        Only the single month is on sale at the moment, so there is nothing to divide: it is
+        either refunded in full before the {win.closesDay}, or posted. Longer subscriptions are
+        coming back, and this is how they will be refunded when they do.
+      </p>
+      )}
       <p>
         If you used a discount code, the refund is worked out on the discounted rate you were
         charged. You are never refunded less than you paid for the months you did not receive.

@@ -41,9 +41,10 @@ export default function Pricing() {
 
       <h2>The rate card</h2>
       <p>
-        All prices are in Indian Rupees and include postage anywhere in India. A longer subscription
-        is a longer commitment at a better monthly rate, not a bundle bought at once — one envelope
-        still arrives each month.
+        All prices are in Indian Rupees and include postage anywhere in India.
+        {business.plans.length > 1
+          ? " A longer subscription is a longer commitment at a better monthly rate, not a bundle bought at once — one envelope still arrives each month."
+          : " Only the single month is on sale at the moment while the rate card is reworked; longer subscriptions are coming back. Anyone already on one keeps it, and keeps the rate they paid."}
       </p>
       <table>
         <thead>
@@ -162,9 +163,14 @@ export default function Pricing() {
 
       <Note>
         <p>
-          <strong>In short:</strong> {business.plans[0].total} for one envelope, down to{" "}
-          {business.plans[2].rate} a month if you take six. Postage included, nothing added at
-          checkout, and nothing charged again afterwards. See{" "}
+          <strong>In short:</strong> {business.plans[0].total} for one envelope
+          {business.plans.length > 1 && (
+            <>
+              , down to {business.plans[business.plans.length - 1].rate} a month if you take{" "}
+              {business.plans[business.plans.length - 1].months}
+            </>
+          )}
+          . Postage included, nothing added at checkout, and nothing charged again afterwards. See{" "}
           <a href="/refunds">Refunds &amp; Cancellation</a> for how to get it back.
         </p>
       </Note>

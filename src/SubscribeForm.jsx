@@ -861,9 +861,14 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       {part === 1 && (
       <Part first>
         <Legend>1 &middot; Choose a subscription</Legend>
+        {/* What this says depends on what is actually on sale. Promising a
+          * better rate for a longer subscription while only one length is
+          * offered is a promise the page cannot keep. */}
         <p style={{ ...muted, margin: 0 }}>
-          Postage within India is included. A longer subscription is a better monthly rate, not a
-          different envelope.
+          Postage within India is included.{" "}
+          {plans.length > 1
+            ? "A longer subscription is a better monthly rate, not a different envelope."
+            : "One envelope, posted to your address — longer subscriptions are coming back shortly."}
         </p>
         <PlanPicker
           pending={plansPending}

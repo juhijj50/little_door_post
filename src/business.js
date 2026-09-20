@@ -98,20 +98,73 @@ export const business = {
   },
 
   /* ── the rate card ───────────────────────────────────────────────────── */
-  /* The prices actually charged live in the `plans` table in Postgres, which
-   * is the source of truth; these mirror it so the Terms page can state a
-   * figure without waiting on an API call. Change one, change the other —
-   * `insert into plans` in backend/app/schema.sql.
+  /*  The prices actually charged live in the `plans` table in Postgres, which
+   *  is the source of truth; these mirror it so the Terms page can state a
+   *  figure without waiting on an API call, and so the sign-up form has a rate
+   *  card to fall back on when the API is asleep. Change one, change the other
+   *  — `insert into plans` in backend/app/schema.sql.
    *
-   * Setting the INTERNATIONAL prices? Read `international.riskMarginPercent`
-   * below first — the number wants a few percent in it that the India rates
-   * do not need. */
+   *  ── ONE PLAN, ON PURPOSE (20 Sep 2026) ────────────────────────────────
+   *
+   *  Only the single month is on sale. The three- and six-month plans are
+   *  switched off — `active = false` on the india rows — while the rate card
+   *  is reworked for next month. Readers who already hold a longer
+   *  subscription keep it and keep the rate they paid; nothing about their
+   *  order changes.
+   *
+   *  The pages below cope with a one-plan card: the "better monthly rate"
+   *  line and the pro-rata worked example only appear when there is a longer
+   *  plan to talk about. Put the longer plans back and they return by
+   *  themselves.
+   *
+   *  What is coming is in `nextRateCard` further down — written out, and
+   *  deliberately not in use.
+   */
   plans: [
     { months: 1, rate: "₹375", total: "₹375", note: "one envelope" },
-    { months: 3, rate: "₹345", total: "₹1,035", note: "three envelopes, one a month" },
-    { months: 6, rate: "₹315", total: "₹1,890", note: "six envelopes, one a month" },
   ],
   currency: "INR",
+
+  /*  ── NEXT MONTH'S RATE CARD — NOT IN USE ───────────────────────────────
+   *
+   *  Planned from October 2026. Nothing reads this: it is here so the figures
+   *  live beside the ones they replace rather than in a note somewhere.
+   *
+   *  The full changeover — including the four places that reject a 12-month
+   *  plan today, and the two readers who move onto the founding rate — is
+   *  written out step by step in backend/NEXT-MONTH-RATE-CHANGE.md. Follow
+   *  that; this is only the figures.
+   *
+   *  Totals, not monthly rates — the monthly rate is the total divided by the
+   *  months, which is what the plans table stores.
+   */
+  nextRateCard: [
+    { months: 1, total: "₹499", perMonth: "₹499" },
+    { months: 3, total: "₹1,380", perMonth: "₹460" },
+    { months: 6, total: "₹2,640", perMonth: "₹440" },
+    { months: 12, total: "₹5,040", perMonth: "₹420" },
+  ],
+
+  /*  What a founding member pays from next month, whatever length they take.
+   *  It matches the twelve-month rate above, so a founding member always pays
+   *  the best price on the card.
+   *
+   *  NOT APPLIED YET, and it must not be until the rate card above is: today
+   *  the standard rate is ₹375, so ₹420 would charge a founding member more
+   *  than a stranger pays. It is ₹315 in the database until then.
+   *
+   *  The two readers on six-month subscriptions are to get this same rate.
+   *  They are not founding members today; add them to `founding_members` when
+   *  the rate changes, keyed on their phone number, and it applies to what
+   *  they take next. It does not touch the six months they have already paid
+   *  for.
+   *
+   *  Who they are is not written here on purpose — this repository is public.
+   *  They are the only two on a six-month plan, so the admin subscription list
+   *  identifies them. The full changeover is in the planning note kept beside
+   *  the backend, which is git-ignored for the same reason.
+   */
+  foundingNextRate: "₹420",
 
   /* ── the timetable ───────────────────────────────────────────────────── */
   /* The same 15th-to-5th window the backend enforces in app/cycles.py. */

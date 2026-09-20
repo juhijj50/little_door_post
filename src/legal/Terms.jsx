@@ -101,8 +101,9 @@ export default function Terms() {
         </tbody>
       </table>
       <p>
-        A longer subscription is a longer commitment at a better monthly rate. It is not a bundle of
-        envelopes bought at once — one envelope still arrives each month.
+        {business.plans.length > 1
+          ? "A longer subscription is a longer commitment at a better monthly rate. It is not a bundle of envelopes bought at once — one envelope still arrives each month."
+          : "Only the single month is on sale at present. A subscription already taken for a longer term is unaffected: those envelopes are still owed, at the rate that was paid for them."}
       </p>
       <p>
         <strong>The whole amount is charged once, at the time of the order.</strong> There is no
