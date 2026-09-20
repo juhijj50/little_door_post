@@ -82,7 +82,7 @@ export const business = {
     "a die-cut vinyl character sticker",
     "an illustrated art print on card",
     "an activity sheet, one printed page",
-    "a folded zine of that month's traditions, with a small keepsake tucked inside",
+    "a special poem, written for that month by a friend of Iris",
     "a printed paper stamp of that month's town",
   ],
   piecesPerMonth: 8,

@@ -30,7 +30,7 @@ const ENVELOPE = [
   ["A character sticker", "A die-cut sticker of Iris, or one of the folk she meets."],
   ["An art print", "A small illustrated print on card, drawn for that month's story."],
   ["An activity sheet", "One page — a puzzle, a recipe, or something to make."],
-  ["A zine", "A little folded zine of the old traditions of that month's world, with a small keepsake tucked into its fold."],
+  ["A special poem", "Written for that month by a friend of Iris, and printed to keep."],
   ["A stamp of the town", "A paper stamp of that month's place, to paste into your passport."],
   ["A Wanderland Passport", "For first-time subscribers. A stapled booklet with a page for every door, and a stamp to paste in each time a letter lands."],
 ];
@@ -194,7 +194,7 @@ export default function TheLittleDoorPost() {
             "position:relative;max-width:46ch;margin:clamp(14px,2.4vh,22px) 0 0;font-size:clamp(15px,2vw,17px);line-height:1.72;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
-          Eight printed pieces — letters, a zine, stickers, an art print — sealed into one envelope
+          Eight printed pieces — letters, a poem, stickers, an art print — sealed into one envelope
           and posted to your letterbox. Anywhere in India.
         </p>
 
