@@ -508,9 +508,10 @@ function ReadersTab({ data }) {
       <section className="adm-card">
         <h2>Download readers</h2>
         <p className="adm-help">
-          An Excel file with two sheets. <strong>Signed up</strong> lists everyone who paid for that edition: address,
-          phone, email, Instagram, birthday, plan, amount, the reader&rsquo;s note and any gift message.
-          <strong> To post</strong> lists everyone that envelope goes to, including readers on longer plans who joined earlier.
+          An Excel file with two sheets. <strong>To post</strong> (the first) lists everyone that edition&rsquo;s
+          envelope goes to — including readers on longer plans who joined in an earlier month — with address, phone,
+          email, Instagram, birthday and their notes. <strong>Signed up</strong> lists only the new purchases made for
+          that edition, with the amount paid.
         </p>
         <div className="adm-row">
           <select className="adm-select" style={{ width: "auto", minWidth: 200 }} value={exportCycle}
