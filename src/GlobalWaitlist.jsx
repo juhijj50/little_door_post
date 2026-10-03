@@ -63,7 +63,7 @@ export default function GlobalWaitlist() {
     <section
       id="global"
       style={css(
-        "position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px);border-top:1px solid var(--color-neutral-300);background:var(--color-neutral-200)"
+        "position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px);border-top:1px solid rgba(255,255,255,.6)"
       )}
     >
       <div
@@ -75,7 +75,7 @@ export default function GlobalWaitlist() {
         <div style={css("max-width:52ch")}>
           <div
             style={css(
-              "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-700)"
+              "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-heading-soft)"
             )}
           >
             <span style={css("width:26px;height:1px;background:var(--color-accent-500)")} />
@@ -84,7 +84,7 @@ export default function GlobalWaitlist() {
 
           <h2
             style={css(
-              "font-family:var(--font-heading);font-weight:600;font-size:clamp(30px,5vw,50px);line-height:1.06;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-accent-800);text-wrap:pretty"
+              "font-family:var(--font-heading);font-weight:600;font-size:clamp(30px,5vw,50px);line-height:1.06;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-heading);text-wrap:pretty"
             )}
           >
             {intl.live ? "Somewhere we don't post yet?" : "Not in India? Not yet — but soon."}
@@ -135,7 +135,7 @@ export default function GlobalWaitlist() {
 
           <div
             style={css(
-              "margin-top:clamp(20px,3.4vh,30px);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-neutral-300);background:var(--color-neutral-100)"
+              "margin-top:clamp(20px,3.4vh,30px);padding:var(--space-4);border-radius:18px;background:var(--glass-bg);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)"
             )}
           >
             <div
@@ -147,7 +147,7 @@ export default function GlobalWaitlist() {
             </div>
             <div
               style={css(
-                "font-family:var(--font-heading);font-weight:600;font-size:clamp(26px,4.2vw,34px);line-height:1.1;margin-top:6px;color:var(--color-accent-800)"
+                "font-family:var(--font-heading);font-weight:600;font-size:clamp(26px,4.2vw,34px);line-height:1.1;margin-top:6px;color:var(--color-heading)"
               )}
             >
               {abroad ? `${abroad.total} a letter` : "…"}
@@ -178,14 +178,14 @@ export default function GlobalWaitlist() {
         {/* ── the form ─────────────────────────────────────────────────── */}
         <div
           style={css(
-            "padding:clamp(22px,3.6vw,34px);border-radius:var(--radius-lg);border:1px solid var(--color-neutral-300);background:var(--color-surface);box-shadow:var(--shadow-sm)"
+            "padding:clamp(22px,3.6vw,34px);border-radius:24px;background:var(--glass-bg-strong);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--glass-border);box-shadow:var(--glass-shadow)"
           )}
         >
           {done ? (
             <div>
               <h3
                 style={css(
-                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(21px,3vw,26px);line-height:1.2;margin:0;color:var(--color-accent-800)"
+                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(21px,3vw,26px);line-height:1.2;margin:0;color:var(--color-heading)"
                 )}
               >
                 {done.already_on_list ? "You were already on the list." : "You are on the list."}
@@ -228,7 +228,7 @@ export default function GlobalWaitlist() {
             <form onSubmit={submit} noValidate style={css("display:flex;flex-direction:column;gap:var(--space-3)")}>
               <h3
                 style={css(
-                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(21px,3vw,26px);line-height:1.2;margin:0;color:var(--color-accent-800)"
+                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(21px,3vw,26px);line-height:1.2;margin:0;color:var(--color-heading)"
                 )}
               >
                 Tell me when it opens

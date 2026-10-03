@@ -69,11 +69,11 @@ const TORN_EDGE =
 const dot = css("width:4px;height:4px;border-radius:50%;background:var(--color-accent-400);flex:none");
 
 const kicker = css(
-  "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-700)"
+  "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-heading-soft)"
 );
 const rule = css("width:26px;height:1px;background:var(--color-accent-500)");
 const h2 = css(
-  "font-family:var(--font-heading);font-weight:600;font-size:clamp(34px,6vw,60px);line-height:1.04;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-accent-800);text-wrap:pretty"
+  "font-family:var(--font-heading);font-weight:600;font-size:clamp(34px,6vw,60px);line-height:1.04;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-heading);text-wrap:pretty"
 );
 const lede = css(
   "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
@@ -164,7 +164,7 @@ function EditionBadge({ edition }) {
         "position:relative;display:inline-flex;flex-wrap:nowrap;align-items:center;gap:10px;max-width:100%;padding:7px 18px 7px 14px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;text-align:left;animation:ldp-rise 1s .3s both;" +
           (soldOut
             ? "background:#f6e3df;color:#7c2f25;border:1px solid #e6c1b9"
-            : "background:var(--color-accent-100);color:var(--color-accent-800);border:1px solid var(--color-accent-300)")
+            : "background:color-mix(in srgb, var(--color-accent-100) 70%, transparent);color:var(--color-accent-800);border:1px solid rgba(255,255,255,.7);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 6px 20px rgba(58,49,40,.08)")
       )}
     >
       <span
@@ -231,6 +231,29 @@ export default function TheLittleDoorPost() {
   const site = useSiteImages(config, failed);
   const heroSrc = site ? mediaUrl(site.hero) || DEFAULT_HERO : null;
   const meetBg = site ? mediaUrl(site.meet) : null;
+
+  /* Meet Iris's words sit on a pane of glass, so they read over any picture:
+   * white words on smoked glass, or black words on frosted glass — chosen in
+   * the panel to suit the picture. Black needs a picture behind it; on the
+   * plain colour the words are always white. The small capitals and the
+   * quote follow the headings' palette, lightened on smoked glass. */
+  const meetDark = Boolean(meetBg) && site?.meetText === "dark";
+  const meetInk = meetDark ? "#1c1814" : "#ffffff";
+  const meetAccent = meetDark
+    ? "var(--color-heading)"
+    : "color-mix(in oklab, var(--color-heading-soft) 42%, #ffffff)";
+
+  /* How each chosen picture sits in its frame (Design tab sliders): the point
+   * kept in view, and the zoom around it. */
+  const frame = (slot) => {
+    const f = site?.frames?.[slot];
+    if (!f) return {};
+    return {
+      objectPosition: `${f.x}% ${f.y}%`,
+      transformOrigin: `${f.x}% ${f.y}%`,
+      transform: f.zoom > 100 ? `scale(${f.zoom / 100})` : undefined,
+    };
+  };
   const subscribeBg = site ? mediaUrl(site.subscribe) || DEFAULT_SUBSCRIBE_BG : null;
 
   const items = config?.envelope?.items?.length ? config.envelope.items : ENVELOPE_FALLBACK;
@@ -244,6 +267,13 @@ export default function TheLittleDoorPost() {
 
   return (
     <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:clip")}>
+      {/* Soft blooms of the palette's colours, fixed behind the page. Glass
+        * is only glass when there is colour behind it to blur. */}
+      <div className="ambient" aria-hidden="true">
+        <span className="ambient__a" />
+        <span className="ambient__b" />
+        <span className="ambient__c" />
+      </div>
       <SiteHeader />
 
       {/* ── hero ───────────────────────────────────────────────────────── */}
@@ -254,10 +284,10 @@ export default function TheLittleDoorPost() {
             key={heroSrc || "pending"}
             src={heroSrc || undefined}
             alt={heroSrc === DEFAULT_HERO ? "A watercolour clearing of mushroom folk, pinecone people and paper ghosts" : ""}
-            style={css(
-              "background:var(--color-neutral-200);animation:ldp-fade 1.4s both;" +
-                (heroSrc === DEFAULT_HERO ? "" : "object-position:50% 50%")
-            )}
+            style={{
+              ...css("background:var(--color-neutral-200);animation:ldp-fade 1.4s both"),
+              ...(heroSrc && heroSrc !== DEFAULT_HERO ? frame("hero") : {}),
+            }}
           />
           <div
             style={{
@@ -288,7 +318,7 @@ export default function TheLittleDoorPost() {
         <p
           className="hero__tagline"
           style={css(
-            "position:relative;font-family:var(--font-heading);font-style:italic;font-weight:400;line-height:1.34;color:var(--color-accent-800);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
+            "position:relative;font-family:var(--font-heading);font-style:italic;font-weight:400;line-height:1.34;color:var(--color-heading);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
           Every month, Iris opens a new door.
@@ -340,12 +370,24 @@ export default function TheLittleDoorPost() {
         id="meet"
         style={{
           ...css(
-            "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background-color:var(--color-accent-800);color:var(--color-neutral-200);overflow:hidden"
+            "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background-color:var(--color-accent-800);overflow:hidden"
           ),
-          /* The panel's picture, shown as it is — no wash over it. */
-          ...(meetBg ? { backgroundImage: `url("${meetBg}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+          color: meetInk,
         }}
       >
+        {/* The panel's picture, shown as it is — no wash over it — and framed
+          * as set in the Design tab. */}
+        {meetBg && (
+          <img
+            src={meetBg}
+            alt=""
+            loading="lazy"
+            style={{
+              ...css("position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none"),
+              ...frame("meet"),
+            }}
+          />
+        )}
         {/* The soft glow belongs to the plain green; over a photograph it
           * would only haze it. */}
         {!meetBg && (
@@ -360,14 +402,17 @@ export default function TheLittleDoorPost() {
             "position:relative;width:min(1120px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:clamp(26px,5vw,60px);align-items:center"
           )}
         >
-          {/* Over a photograph the light text gets a soft shadow, so it stays
-            * readable on whatever the picture has behind it. */}
-          <div style={meetBg ? { textShadow: "0 1px 3px rgba(0,0,0,.55), 0 2px 18px rgba(0,0,0,.45)" } : undefined}>
-            <div style={css("display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-300)")}>
-              <span style={css("width:26px;height:1px;background:var(--color-accent-300)")} />
+          <div className={`meet__panel ${meetDark ? "meet__panel--frost" : "meet__panel--smoke"}`}>
+            <div
+              style={{
+                ...css("display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase"),
+                color: meetAccent,
+              }}
+            >
+              <span style={{ ...css("width:26px;height:1px"), background: meetAccent }} />
               The letter-writer
             </div>
-            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-neutral-200)")}>
+            <h2 style={{ ...css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0"), color: meetInk }}>
               Meet Iris
             </h2>
             <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:clamp(16px,2.6vh,24px) 0 0;text-wrap:pretty")}>
@@ -384,9 +429,12 @@ export default function TheLittleDoorPost() {
               printed, folded and sealed by one pair of hands.
             </p>
             <p
-              style={css(
-                "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);color:var(--color-accent-300);text-wrap:pretty"
-              )}
+              style={{
+                ...css(
+                  "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);text-wrap:pretty"
+                ),
+                color: meetAccent,
+              }}
             >
               The world has never once run out of corners.
             </p>
@@ -442,8 +490,9 @@ export default function TheLittleDoorPost() {
             {items.map(({ title, detail }, i) => (
               <div
                 key={`${i}-${title}`}
+                className="glass glass--lift"
                 style={css(
-                  "display:flex;flex-direction:column;gap:9px;padding:clamp(14px,1.8vw,20px);border-radius:var(--radius-md);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-sm)"
+                  "display:flex;flex-direction:column;gap:9px;padding:clamp(14px,1.8vw,20px);border-radius:18px"
                 )}
               >
                 <div style={css("display:flex;align-items:center;gap:10px")}>
@@ -456,7 +505,7 @@ export default function TheLittleDoorPost() {
                   </span>
                   <span
                     style={css(
-                      "font-family:var(--font-heading);font-weight:600;font-size:17px;line-height:1.22;color:var(--color-accent-800);text-wrap:pretty"
+                      "font-family:var(--font-heading);font-weight:600;font-size:17px;line-height:1.22;color:var(--color-heading);text-wrap:pretty"
                     )}
                   >
                     {title}
@@ -472,7 +521,7 @@ export default function TheLittleDoorPost() {
       </section>
 
       {/* ── the photographs ────────────────────────────────────────────── */}
-      <section id="gallery" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(16px,5vw,44px);background:var(--color-accent-100)")}>
+      <section id="gallery" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(16px,5vw,44px)")}>
         <div style={css("width:min(1180px,100%);margin:0 auto")}>
           <div style={css("max-width:52ch;margin-bottom:clamp(18px,3vh,28px)")}>
             <div style={kicker}>
@@ -490,7 +539,7 @@ export default function TheLittleDoorPost() {
       </section>
 
       {/* ── sign up ────────────────────────────────────────────────────── */}
-      <section id="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
+      <section id="subscribe" className="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
         {/* The picture behind the form, shown as it is: no pale wash over it
           * and no fading of its colours. The form sits on its own solid card,
           * so it stays readable whatever is behind. */}
@@ -500,21 +549,24 @@ export default function TheLittleDoorPost() {
               src={subscribeBg}
               alt=""
               loading="lazy"
-              style={css("width:100%;height:100%;object-fit:cover")}
+              style={{ ...css("width:100%;height:100%;object-fit:cover"), ...frame("subscribe") }}
             />
           )}
         </div>
 
+        {/* One card of frosted glass, solid enough to read over any background. On a desktop it
+          * is wide, with the heading on the left and the form on the right,
+          * so the whole section fits one screen; on a phone it stacks. The
+          * layout is in site.css (.subscribe…). */}
         <div
-          style={css(
-            "position:relative;width:min(660px,100%);margin:0 auto;padding:clamp(20px,5vw,44px);border-radius:var(--radius-lg);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-lg)"
-          )}
+          className="subscribe__card glass glass--strong"
+          style={css("position:relative;margin:0 auto;border-radius:28px")}
         >
-          <div style={css("text-align:center;margin-bottom:clamp(22px,3.6vh,34px)")}>
-            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(32px,5.6vw,52px);line-height:1.04;margin:0;color:var(--color-accent-800)")}>
+          <div className="subscribe__intro">
+            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(32px,5.6vw,52px);line-height:1.04;margin:0;color:var(--color-heading)")}>
               Receive a letter
             </h2>
-            <p style={{ ...lede, maxWidth: "42ch", marginLeft: "auto", marginRight: "auto" }}>
+            <p className="subscribe__lede" style={{ ...lede, maxWidth: "42ch" }}>
               {!edition
                 ? "Choose a subscription, tell Iris where to post it, and your address goes into this month’s batch."
                 : edition.open
@@ -522,7 +574,9 @@ export default function TheLittleDoorPost() {
                 : `Every copy of the ${edition.name} edition has gone. ${edition.next.name} is next.`}
             </p>
           </div>
-          <SubscribeForm />
+          <div className="subscribe__form">
+            <SubscribeForm />
+          </div>
         </div>
       </section>
 

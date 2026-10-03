@@ -39,7 +39,7 @@ export default function RedRace() {
 
       <section style={css("padding:clamp(34px,6vh,72px) clamp(16px,4vw,44px) clamp(16px,3vh,30px)")}>
         <div style={css("width:min(760px,100%);margin:0 auto;text-align:center;animation:ldp-rise .9s both")}>
-          <div style={css("display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--color-accent-700)")}>
+          <div style={css("display:inline-flex;align-items:center;gap:10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--color-heading-soft)")}>
             <span style={css("width:22px;height:1px;background:var(--color-accent-500)")} />
             Door 1 &middot; The first letter
             <span style={css("width:22px;height:1px;background:var(--color-accent-500)")} />
@@ -70,7 +70,7 @@ export default function RedRace() {
             "width:min(720px,100%);margin:0 auto;padding:clamp(22px,6vw,60px) clamp(18px,6vw,64px);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg)"
           )}
         >
-          <p style={css("margin:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(19px,3.4vw,24px);color:var(--color-accent-800)")}>
+          <p style={css("margin:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(19px,3.4vw,24px);color:var(--color-heading)")}>
             Dearest Reader
           </p>
 
@@ -192,7 +192,7 @@ export default function RedRace() {
           </p>
           <p
             style={css(
-              "font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:clamp(28px,6vw,42px);line-height:1;margin:8px 0 0;color:var(--color-accent-800)"
+              "font-family:var(--font-heading);font-style:italic;font-weight:600;font-size:clamp(28px,6vw,42px);line-height:1;margin:8px 0 0;color:var(--color-heading)"
             )}
           >
             Iris

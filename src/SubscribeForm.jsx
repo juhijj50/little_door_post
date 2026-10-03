@@ -197,7 +197,7 @@ const Field = ({ id, label, optional, hint, error, children }) => (
 const Legend = ({ children }) => (
   <legend
     style={css(
-      "padding:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(20px,2.8vw,25px);line-height:1.25;color:var(--color-accent-800)"
+      "padding:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(20px,2.8vw,25px);line-height:1.25;color:var(--color-heading)"
     )}
   >
     {children}
@@ -356,7 +356,7 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
             />
             <span className="dot" style={css("margin-top:4px")} />
             <span style={css("flex:1;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px")}>
-              <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800)")}>
+              <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-heading)")}>
                 {months}
               </span>
               <span style={css("font-size:13px;color:var(--color-neutral-600)")}>
@@ -375,7 +375,7 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
                     {money(full, plan.currency)}
                   </s>
                 )}
-                <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800)")}>
+                <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-heading)")}>
                   {plan.totalDisplay}
                 </span>
               </span>
@@ -477,7 +477,7 @@ const SoldOut = ({ edition }) => (
     </div>
     <h3
       style={css(
-        "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-800);margin:8px 0 0"
+        "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-heading);margin:8px 0 0"
       )}
     >
       The {edition.name} edition is sold out.
@@ -746,7 +746,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
     "border:1px solid var(--color-neutral-300);border-radius:var(--radius-md);padding:clamp(20px,4vw,30px);background:var(--color-neutral-200)"
   );
   const heading = css(
-    "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-800);margin:0"
+    "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-heading);margin:0"
   );
   const muted = css("font-size:13px;line-height:1.7;color:var(--color-neutral-700)");
 
@@ -982,7 +982,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 />
                 <span className="dot" style={css("margin-top:3px")} />
                 <span>
-                  <span style={css("font-family:var(--font-heading);font-weight:600;font-size:17px;color:var(--color-accent-800);display:block")}>
+                  <span style={css("font-family:var(--font-heading);font-weight:600;font-size:17px;color:var(--color-heading);display:block")}>
                     {label}
                   </span>
                   <span style={css("font-size:13px;color:var(--color-neutral-600)")}>{blurb}</span>
@@ -1166,19 +1166,25 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               placeholder="House or flat number and street"
             />
           </Field>
-          <Field id="ldp-area" label="Area, colony or apartment" optional error={fieldErrs.address_line2}>
-            <input
-              className="input" id="ldp-area" name="address_line2" type="text"
-              autoComplete="address-line2" value={values.address_line2} onChange={onChange}
-              placeholder="Sector, society, block"
-            />
-          </Field>
-          <Field id="ldp-landmark" label="Landmark" optional error={fieldErrs.landmark}>
-            <input
-              className="input" id="ldp-landmark" name="landmark" type="text"
-              value={values.landmark} onChange={onChange} placeholder="Near the old banyan tree"
-            />
-          </Field>
+
+          {/* Short fields share a row on a wide screen and stack on a phone —
+            * the grids wrap by themselves. Laid out this way so the whole step
+            * fits one desktop screen. */}
+          <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:var(--space-3)")}>
+            <Field id="ldp-area" label="Area, colony or apartment" optional error={fieldErrs.address_line2}>
+              <input
+                className="input" id="ldp-area" name="address_line2" type="text"
+                autoComplete="address-line2" value={values.address_line2} onChange={onChange}
+                placeholder="Sector, society, block"
+              />
+            </Field>
+            <Field id="ldp-landmark" label="Landmark" optional error={fieldErrs.landmark}>
+              <input
+                className="input" id="ldp-landmark" name="landmark" type="text"
+                value={values.landmark} onChange={onChange} placeholder="Near the old banyan tree"
+              />
+            </Field>
+          </div>
 
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,140px),1fr));gap:var(--space-3)")}>
             <Field id="ldp-city" label="City" error={fieldErrs.city}>
@@ -1188,11 +1194,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               />
             </Field>
             {abroad ? (
-              <Field
-                id="ldp-postcode" label="Postal / ZIP code" optional
-                error={fieldErrs.pincode}
-                hint="However your post office writes it."
-              >
+              <Field id="ldp-postcode" label="Postal / ZIP code" optional error={fieldErrs.pincode}>
                 <input
                   className="input" id="ldp-postcode" name="pincode" type="text"
                   autoComplete="postal-code" value={values.pincode} onChange={onChange}
@@ -1209,34 +1211,31 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 />
               </Field>
             )}
+            {/* A dropdown of Indian states is no use in Oregon, and a required
+              * "state" is meaningless in Singapore — so abroad it is one
+              * optional line for whatever that address actually has. */}
+            {abroad ? (
+              <Field id="ldp-region" label="State or region" optional error={fieldErrs.state}>
+                <input
+                  className="input" id="ldp-region" name="state" type="text"
+                  autoComplete="address-level1" value={values.state} onChange={onChange}
+                  placeholder="Oregon"
+                />
+              </Field>
+            ) : (
+              <Field id="ldp-state" label="State" error={fieldErrs.state}>
+                <select
+                  className="input" id="ldp-state" name="state" required autoComplete="address-level1"
+                  value={values.state} onChange={onChange}
+                >
+                  <option value="">Choose a state</option>
+                  {STATES.map((st) => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
           </div>
-
-          {/* A dropdown of Indian states is no use in Oregon, and a required
-            * "state" is meaningless in Singapore — so abroad it is one
-            * optional line for whatever that address actually has. */}
-          {abroad ? (
-            <Field
-              id="ldp-region" label="State, province or region" optional error={fieldErrs.state}
-            >
-              <input
-                className="input" id="ldp-region" name="state" type="text"
-                autoComplete="address-level1" value={values.state} onChange={onChange}
-                placeholder="Oregon"
-              />
-            </Field>
-          ) : (
-            <Field id="ldp-state" label="State" error={fieldErrs.state}>
-              <select
-                className="input" id="ldp-state" name="state" required autoComplete="address-level1"
-                value={values.state} onChange={onChange}
-              >
-                <option value="">Choose a state</option>
-                {STATES.map((st) => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </Field>
-          )}
 
           <p style={{ ...muted, margin: 0 }}>
             {abroad
@@ -1249,7 +1248,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             * die. */}
           <div
             style={css(
-              "display:flex;flex-direction:column;gap:var(--space-3);margin-top:6px;padding:14px;border-radius:var(--radius-md);background:var(--color-accent-100)"
+              "display:flex;flex-direction:column;gap:var(--space-3);padding:14px;border-radius:var(--radius-md);background:var(--color-accent-100)"
             )}
           >
             {/* Written out rather than picked from a list. A row of tick-boxes
@@ -1261,76 +1260,72 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               error={fieldErrs.interests_note} hint="It helps Iris choose what to write about next."
             >
               <textarea
-                className="input" id="ldp-note" name="interests_note" rows={3} maxLength={600}
+                className="input" id="ldp-note" name="interests_note" rows={2} maxLength={600}
                 value={values.interests_note} onChange={onChange}
                 placeholder="A place you love, a story you want"
+                style={css("min-height:64px")}
               />
             </Field>
-            <Field
-              id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}
-              hint="It works from the number you signed up with."
-            >
-              {/* No placeholder: a code in grey text is a code being handed
-                * out. The people who have one already know what it says. */}
-              <input
-                className="input" id="ldp-code" name="promo_code" type="text" value={values.promo_code}
-                onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
-                style={css("letter-spacing:.06em")}
-              />
-            </Field>
-            <label className="radio" style={css("gap:10px;font-size:14px;min-height:44px")}>
-              <input
-                type="checkbox" checked={values.is_gift}
-                onChange={(e) => set("is_gift", e.target.checked)}
-                style={css(
-                  "position:static;opacity:1;width:18px;height:18px;pointer-events:auto;accent-color:var(--color-accent-600)"
-                )}
-              />
-              <span>This is a gift for somebody else</span>
-            </label>
+            <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:var(--space-3);align-items:end")}>
+              <Field id="ldp-code" label="Have a code?" optional error={fieldErrs.promo_code}>
+                {/* No placeholder: a code in grey text is a code being handed
+                  * out. The people who have one already know what it says. */}
+                <input
+                  className="input" id="ldp-code" name="promo_code" type="text" value={values.promo_code}
+                  onChange={(e) => set("promo_code", e.target.value.toUpperCase())}
+                  style={css("letter-spacing:.06em")}
+                />
+              </Field>
+              <label className="radio" style={css("gap:10px;font-size:14px;min-height:46px")}>
+                <input
+                  type="checkbox" checked={values.is_gift}
+                  onChange={(e) => set("is_gift", e.target.checked)}
+                  style={css(
+                    "position:static;opacity:1;width:18px;height:18px;pointer-events:auto;accent-color:var(--color-accent-600)"
+                  )}
+                />
+                <span>This is a gift for somebody else</span>
+              </label>
+            </div>
             {values.is_gift && (
               <Field
                 id="ldp-gift" label="A line to go in with it" error={fieldErrs.gift_message}
                 hint="Iris copies it onto a card and tucks it into the first envelope."
               >
                 <textarea
-                  className="input" id="ldp-gift" name="gift_message" rows={3} maxLength={600} required
+                  className="input" id="ldp-gift" name="gift_message" rows={2} maxLength={600} required
                   value={values.gift_message} onChange={onChange}
                   placeholder="For Ammu, who reads everything twice — happy birthday."
+                  style={css("min-height:64px")}
                 />
               </Field>
             )}
+          </div>
+
+          <Notice>{formError}</Notice>
+
+          <div style={css("display:flex;flex-wrap:wrap;align-items:center;gap:10px")}>
+            <button
+              className="btn btn-primary" type="submit" disabled={busy}
+              style={css("flex:1 1 220px;padding:14px 24px;font-size:16px")}
+            >
+              {busy ? "Just a moment…" : "Seal the envelope"}
+            </button>
+            <button className="btn btn-ghost" type="button" onClick={() => goTo(2)} style={css("font-size:13px")}>
+              &larr; Back to who it&rsquo;s for
+            </button>
           </div>
 
           {/* The DPDP Act wants the notice at the point the details are handed
             * over, not only on a page somewhere else. Nothing is charged by
             * this button, so it is a notice rather than a consent gate — the
             * tick that authorises the purchase is on the next step. */}
-          <p style={muted}>
-            We use these details to address and post your envelope, and nothing else. We never see
-            your card or UPI details. See the{" "}
-            <a href="/privacy" target="_blank" rel="noreferrer noopener">Privacy Policy</a>.
-          </p>
-
-          <Notice>{formError}</Notice>
-
-          <button
-            className="btn btn-primary btn-block" type="submit" disabled={busy}
-            style={css("padding:15px 24px;font-size:16px;margin-top:0")}
-          >
-            {busy ? "Just a moment…" : "Seal the envelope"}
-          </button>
-          <button
-            className="btn btn-ghost"
-            type="button"
-            onClick={() => goTo(2)}
-            style={css("align-self:flex-start;font-size:13px")}
-          >
-            &larr; Back to who it&rsquo;s for
-          </button>
           <p style={css("margin:0;font-size:12px;line-height:1.6;color:var(--color-neutral-600)")}>
-            Iris writes the address by hand, so please give it exactly as your post office likes it.
-            See <a href="/pricing">pricing</a> and <a href="/refunds">cancellations</a>.
+            We use these details only to address and post your envelope, and never see your card or
+            UPI details &mdash; see the{" "}
+            <a href="/privacy" target="_blank" rel="noreferrer noopener">Privacy Policy</a>. Iris
+            writes the address by hand, so give it as your post office likes it. See{" "}
+            <a href="/pricing">pricing</a> and <a href="/refunds">cancellations</a>.
           </p>
         </Part>
       )}

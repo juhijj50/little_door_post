@@ -395,3 +395,188 @@
     display: block;
   }
 }
+
+/* ── receive a letter ──────────────────────────────────────────────────── */
+
+/* Landing on a section from the menu puts its top just under the sticky
+ * header, not behind it. */
+section[id] {
+  scroll-margin-top: var(--header-h);
+}
+
+/* A phone: the heading sits above the form, centred, on the one card. */
+.subscribe__card {
+  width: min(660px, 100%);
+  padding: clamp(20px, 5vw, 44px);
+}
+.subscribe__intro {
+  text-align: center;
+  margin-bottom: clamp(22px, 3.6vh, 34px);
+}
+.subscribe__lede {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* A desktop: the whole section on one screen below the header. The card is
+ * wide — heading on the left, form on the right — so the steps are short
+ * enough to fit, and on a short laptop screen the form scrolls inside the
+ * card rather than pushing the section past the bottom of the screen. */
+@media (min-width: 901px) and (min-height: 560px) {
+  .subscribe {
+    min-height: calc(100svh - var(--header-h));
+    display: flex;
+    align-items: center;
+    padding: 3svh clamp(20px, 4vw, 44px) !important;
+  }
+  .subscribe__card {
+    width: min(1120px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
+    gap: clamp(28px, 4vw, 56px);
+    padding: clamp(24px, 3.4svh, 40px) clamp(28px, 3.4vw, 48px);
+  }
+  .subscribe__intro {
+    align-self: center;
+    text-align: left;
+    margin: 0;
+  }
+  .subscribe__lede {
+    margin-left: 0 !important;
+  }
+  /* The height limit sits on the form, not the card: a grid does not hold
+   * its rows to its own max-height. Screen, less header, section padding
+   * and card padding. */
+  .subscribe__form {
+    max-height: calc(100svh - var(--header-h) - 6svh - 7svh);
+    overflow-y: auto;
+    padding-right: 6px;
+    margin-right: -6px;
+  }
+  /* The gaps between the form's parts, tightened for the screen. */
+  .subscribe__form form {
+    gap: clamp(14px, 2.2svh, 22px) !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Glass
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* The colour behind the glass: three soft blooms of the palette, fixed to
+ * the screen so the page slides over them as it scrolls. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.ambient span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.55;
+}
+.ambient__a {
+  width: 46vmax; height: 46vmax; left: -12vmax; top: 18vh;
+  background: radial-gradient(circle, var(--color-accent-300), transparent 68%);
+  animation: ldp-drift 26s ease-in-out infinite alternate;
+}
+.ambient__b {
+  width: 40vmax; height: 40vmax; right: -10vmax; top: 44vh;
+  background: radial-gradient(circle, var(--color-accent-2-300), transparent 68%);
+  animation: ldp-drift 32s -8s ease-in-out infinite alternate-reverse;
+}
+.ambient__c {
+  width: 34vmax; height: 34vmax; left: 34vw; bottom: -14vmax;
+  background: radial-gradient(circle, #f2c6bf, transparent 68%);
+  animation: ldp-drift 29s -4s ease-in-out infinite alternate;
+}
+@keyframes ldp-drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(4vmax, -3vmax) scale(1.08); }
+}
+
+/* A pane of frosted glass: translucent paper, blurred and brightened, a
+ * bright hairline at its edge, and a shadow that lifts it off the page. */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.glass--strong {
+  background: var(--glass-bg-strong);
+}
+.glass--lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.glass--lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 44px rgba(58, 49, 40, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* The header: glass across the top of the screen. */
+.site-header {
+  background: rgba(248, 243, 232, 0.8);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 24px rgba(58, 49, 40, 0.06);
+}
+
+/* A framed picture zoomed in must not spill out of its band. */
+.hero__art {
+  overflow: hidden;
+}
+
+/* Meet Iris's words on glass: smoked under white words, frosted under
+ * black ones. Readable over any picture, without dimming the picture. */
+.meet__panel {
+  position: relative;
+  padding: clamp(22px, 3.4vw, 44px);
+  border-radius: 28px;
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+}
+.meet__panel--smoke {
+  background: var(--glass-dark-bg);
+  border: 1px solid var(--glass-dark-border);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.meet__panel--frost {
+  background: rgba(255, 253, 247, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 18px 50px rgba(58, 49, 40, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Gallery photographs in glass frames. */
+.gallery__tile {
+  padding: 6px;
+  border-radius: 18px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.gallery__tile img {
+  border-radius: 13px;
+}
+.round-arrow {
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-color: var(--glass-border);
+}
+
+/* No z-index on the sections: the glow comes first in the page and every
+ * section after it is painted over it anyway. A z-index here would make each
+ * section its own layer and stop the logo blending into the page (its white
+ * background shows as a box). */
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient span { animation: none; }
+}

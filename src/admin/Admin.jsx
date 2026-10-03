@@ -6,7 +6,7 @@
  *    Edition   which month is on sale; open, sold out, or move on
  *    Envelope  what is in each edition's envelope, and its photograph
  *    Gallery   upload and delete the photographs on the site
- *    Site images  the hero picture, and the Meet Iris / Receive a letter backgrounds
+ *    Design    the colour palettes, and the hero / Meet Iris / Receive a letter pictures
  *    Readers   look somebody up, cancel or reinstate; Excel per edition
  *    Prices    the rate card
  *    Account   change the password, sign out
@@ -17,6 +17,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./admin.css";
 import { mediaUrl } from "../api.js";
+import { PALETTES, headingColour } from "../theme.js";
 import {
   changePassword,
   deleteMedia,
@@ -29,6 +30,7 @@ import {
   setPlan,
   setSiteImage,
   setSubscriptionStatus,
+  setTheme,
   signIn,
   signOut,
   undoCount,
@@ -476,35 +478,123 @@ function GalleryTab({ data, reload }) {
   );
 }
 
-/* ── site images ───────────────────────────────────────────────────────── */
+/* ── design: colours and pictures ──────────────────────────────────────── */
 
 const SLOTS = [
   {
     slot: "hero",
     title: "Top of the page",
-    help: "The wide picture across the top of the home page. Use a landscape image, at least 1800px wide — the band crops some of the top and bottom.",
+    help: "The wide picture across the top of the home page. Use a landscape image, at least 1800px wide.",
     fallback: { src: "/assets/forest.webp", label: "The watercolour forest" },
-    shape: "aspect-ratio:16/5",
+    // The band is about six times wider than it is tall on a desktop.
+    aspect: "6 / 1",
   },
   {
     slot: "meet",
     title: "Behind “Meet Iris”",
-    help: "Shown as it is, across the whole section. The text is light, so a darker picture — or one that is darker on the left — reads best.",
-    fallback: { colour: "var(--color-accent-800)", label: "Plain dark green" },
-    shape: "aspect-ratio:16/7",
+    help: "Shown as it is, across the whole section. The words sit on a pane of glass, so any picture works.",
+    fallback: { colour: "var(--color-accent-800)", label: "Plain colour (the buttons’ palette)" },
+    aspect: "16 / 10",
   },
   {
     slot: "subscribe",
     title: "Behind “Receive a letter”",
-    help: "Shown as it is, around the sign-up form. The form sits on its own card, so any picture works.",
+    help: "Shown as it is, around the sign-up form. The form sits on its own glass card, so any picture works.",
     fallback: { src: "/assets/gallery-green-seals.webp", label: "Green envelopes with wax seals" },
-    shape: "aspect-ratio:16/7",
+    aspect: "16 / 10",
   },
 ];
 
-function SiteImageCard({ def, current, reload }) {
+const CENTRED = { x: 50, y: 50, zoom: 100 };
+
+/* The picture as the site will show it in its frame. Dragging it moves the
+ * picture, the same as the sliders. */
+function FramePreview({ src, aspect, frame, onDrag, fallbackColour, label }) {
+  const box = useRef(null);
+  const drag = useRef(null);
+
+  const down = (e) => {
+    if (!onDrag) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { x: e.clientX, y: e.clientY, start: frame };
+  };
+  const move = (e) => {
+    if (!drag.current || !box.current) return;
+    const { width, height } = box.current.getBoundingClientRect();
+    // Dragging right shows more of the left of the picture: the point kept
+    // in view moves the other way, slower when zoomed in.
+    const z = drag.current.start.zoom / 100;
+    const nx = drag.current.start.x - ((e.clientX - drag.current.x) / width) * 100 / z;
+    const ny = drag.current.start.y - ((e.clientY - drag.current.y) / height) * 100 / z;
+    onDrag({
+      ...drag.current.start,
+      x: Math.round(Math.min(100, Math.max(0, nx))),
+      y: Math.round(Math.min(100, Math.max(0, ny))),
+    });
+  };
+  const up = () => {
+    drag.current = null;
+  };
+
+  return (
+    <div
+      ref={box}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      style={{
+        position: "relative",
+        aspectRatio: aspect,
+        borderRadius: 12,
+        overflow: "hidden",
+        border: "1px solid var(--color-neutral-300)",
+        background: fallbackColour || "var(--color-neutral-200)",
+        cursor: onDrag ? "grab" : "default",
+        touchAction: onDrag ? "none" : "auto",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          draggable={false}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: `${frame.x}% ${frame.y}%`,
+            transformOrigin: `${frame.x}% ${frame.y}%`,
+            transform: `scale(${frame.zoom / 100})`,
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
+      ) : (
+        <span style={{ color: "#fff", fontSize: 14 }}>{label}</span>
+      )}
+    </div>
+  );
+}
+
+const Slider = ({ label, value, min, max, onChange, suffix = "%" }) => (
+  <label style={{ display: "grid", gridTemplateColumns: "110px 1fr 48px", alignItems: "center", gap: 10, fontSize: 13 }}>
+    <span className="adm-label" style={{ margin: 0 }}>{label}</span>
+    <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))}
+      style={{ accentColor: "var(--color-accent-600)" }} />
+    <span style={{ fontVariantNumeric: "tabular-nums", textAlign: "right" }}>{value}{suffix}</span>
+  </label>
+);
+
+function SiteImageCard({ def, current, tone, savedFrame, reload }) {
   const { busy, msg, run } = useAction();
   const fileRef = useRef(null);
+  const [frame, setFrame] = useState(savedFrame || CENTRED);
+  useEffect(() => setFrame(savedFrame || CENTRED), [savedFrame?.x, savedFrame?.y, savedFrame?.zoom, current]); // eslint-disable-line react-hooks/exhaustive-deps
+  const saved = savedFrame || CENTRED;
+  const moved = frame.x !== saved.x || frame.y !== saved.y || frame.zoom !== saved.zoom;
 
   const onFile = async (e) => {
     const file = e.target.files?.[0];
@@ -513,7 +603,7 @@ function SiteImageCard({ def, current, reload }) {
     const done = await run(async () => {
       const row = await uploadImage(file, { kind: "site" });
       return setSiteImage(def.slot, row.id);
-    }, "Saved — it is on the site now.");
+    }, "Saved — it is on the site now. Drag it or use the sliders to frame it.");
     if (done) reload();
   };
 
@@ -523,34 +613,63 @@ function SiteImageCard({ def, current, reload }) {
     if (done) reload();
   };
 
-  const preview = current ? mediaUrl(current) : def.fallback.src;
+  const saveFrame = async () => {
+    const done = await run(
+      () => setSiteImage(def.slot, undefined, undefined, { pos_x: frame.x, pos_y: frame.y, zoom: frame.zoom }),
+      "Framing saved — the site shows it like this now."
+    );
+    if (done) reload();
+  };
+
+  const setTone = async (next) => {
+    const done = await run(() => setSiteImage(def.slot, undefined, next),
+      `Words are now ${next === "dark" ? "black" : "white"} on the site.`);
+    if (done) reload();
+  };
+
+  const src = current ? mediaUrl(current) : def.fallback.src;
   return (
     <section className="adm-card">
       <h3>{def.title}</h3>
       <p className="adm-help">{def.help}</p>
-      <div
-        style={{
-          borderRadius: 12,
-          overflow: "hidden",
-          border: "1px solid var(--color-neutral-300)",
-          background: def.fallback.colour || "var(--color-neutral-200)",
-          aspectRatio: def.shape.split(":")[1],
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        {preview ? (
-          <img src={preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        ) : (
-          <span style={{ color: "var(--color-neutral-200)", fontSize: 14 }}>{def.fallback.label}</span>
-        )}
-      </div>
+      <FramePreview
+        src={src}
+        aspect={def.aspect}
+        frame={current ? frame : CENTRED}
+        onDrag={current ? setFrame : null}
+        fallbackColour={def.fallback.colour}
+        label={def.fallback.label}
+      />
       <p className="adm-help" style={{ margin: "8px 0 12px" }}>
-        {current ? "Your picture." : `The original: ${def.fallback.label.toLowerCase()}.`}
+        {current
+          ? "Your picture, as the site frames it on a desktop. Drag it to move it."
+          : `The original: ${def.fallback.label.toLowerCase()}.`}
       </p>
+
+      {current && (
+        <div style={{ display: "grid", gap: 8, marginBottom: 14, maxWidth: 520 }}>
+          <Slider label="Left ↔ right" value={frame.x} min={0} max={100} onChange={(x) => setFrame({ ...frame, x })} />
+          <Slider label="Up ↕ down" value={frame.y} min={0} max={100} onChange={(y) => setFrame({ ...frame, y })} />
+          <Slider label="Zoom" value={frame.zoom} min={100} max={300} onChange={(zoom) => setFrame({ ...frame, zoom })} />
+          <div className="adm-row">
+            <button className="adm-btn adm-btn--primary adm-btn--small" disabled={busy || !moved} onClick={saveFrame}>
+              Save framing
+            </button>
+            <button className="adm-btn adm-btn--small" disabled={busy} onClick={() => setFrame(CENTRED)}>
+              Centre it
+            </button>
+            {moved && (
+              <button className="adm-btn adm-btn--small adm-btn--ghost" disabled={busy} onClick={() => setFrame(saved)}>
+                Undo changes
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="adm-row">
-        <button className="adm-btn adm-btn--primary" disabled={busy} onClick={() => fileRef.current?.click()}>
-          {busy ? "Uploading…" : current ? "Replace picture" : "Upload a picture"}
+        <button className="adm-btn" disabled={busy} onClick={() => fileRef.current?.click()}>
+          {busy ? "Working…" : current ? "Replace picture" : "Upload a picture"}
         </button>
         {current && (
           <button className="adm-btn adm-btn--danger" disabled={busy} onClick={reset}>
@@ -559,24 +678,165 @@ function SiteImageCard({ def, current, reload }) {
         )}
       </div>
       <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onFile} />
+
+      {def.slot === "meet" && (
+        <div style={{ marginTop: 16 }}>
+          <span className="adm-label">Colour of the words</span>
+          <div className="adm-row" role="radiogroup" aria-label="Colour of the words">
+            {[["light", "White"], ["dark", "Black"]].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={tone === value}
+                className={`adm-btn${tone === value ? " adm-btn--primary" : ""}`}
+                disabled={busy}
+                onClick={() => tone !== value && setTone(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="adm-help" style={{ margin: "6px 0 0" }}>
+            White words sit on smoked glass, black words on frosted glass. Black needs a picture
+            behind it &mdash; on the plain colour the words are always white.
+          </p>
+        </div>
+      )}
       <div style={{ marginTop: 12 }}><Msg msg={msg} /></div>
     </section>
   );
 }
 
-function SiteImagesTab({ data, reload }) {
+/* One row of palette swatches. */
+function PalettePicker({ label, value, onChange, swatch }) {
+  return (
+    <div>
+      <span className="adm-label">{label}</span>
+      <div role="radiogroup" aria-label={label} style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        {Object.entries(PALETTES).map(([id, p]) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={value === id}
+            title={p.name}
+            onClick={() => onChange(id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 12px 6px 6px",
+              borderRadius: 999,
+              border: value === id ? "2px solid var(--color-text)" : "1px solid var(--color-neutral-300)",
+              background: "#fff",
+              cursor: "pointer",
+              font: "inherit",
+              fontSize: 13,
+            }}
+          >
+            <span style={{ width: 24, height: 24, borderRadius: "50%", background: swatch(id), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.1)" }} />
+            {p.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ColoursCard({ theme, reload }) {
+  const [buttons, setButtons] = useState(theme.buttons);
+  const [headings, setHeadings] = useState(theme.headings);
+  const { busy, msg, run } = useAction();
+  const changed = buttons !== theme.buttons || headings !== theme.headings;
+  const btn = PALETTES[buttons].base;
+  const head = headingColour(headings);
+
+  const save = async () => {
+    const done = await run(() => setTheme({ buttons, headings }), "Saved — the site uses these colours now.");
+    if (done) reload();
+  };
+
+  return (
+    <section className="adm-card">
+      <h3>Colours</h3>
+      <p className="adm-help">
+        One palette for the buttons (and the highlights that go with them), one for the headings.
+        Sage is the original look.
+      </p>
+      <div style={{ display: "grid", gap: 18 }}>
+        <PalettePicker label="Buttons" value={buttons} onChange={setButtons} swatch={(id) => PALETTES[id].base} />
+        <PalettePicker label="Headings" value={headings} onChange={setHeadings} swatch={(id) => headingColour(id)} />
+      </div>
+
+      {/* A small piece of the site in the chosen colours. */}
+      <div
+        style={{
+          marginTop: 18,
+          padding: "22px 24px",
+          borderRadius: 18,
+          background: `linear-gradient(135deg, color-mix(in oklab, ${btn} 14%, #fffdf7), #fffdf7 60%, color-mix(in oklab, ${PALETTES[headings].base} 12%, #fffdf7))`,
+          border: "1px solid var(--color-neutral-300)",
+        }}
+      >
+        <div style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 600, color: PALETTES[headings].base }}>
+          Preview
+        </div>
+        <div style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 32, lineHeight: 1.1, margin: "6px 0 14px", color: head }}>
+          What&rsquo;s in the envelope
+        </div>
+        <span
+          style={{
+            display: "inline-flex",
+            padding: "11px 22px",
+            borderRadius: 999,
+            color: "#fff",
+            fontFamily: "var(--font-heading)",
+            fontWeight: 600,
+            background: `linear-gradient(180deg, color-mix(in oklab, ${btn} 84%, #fffdf7), ${btn} 55%, color-mix(in oklab, ${btn} 80%, #14110d))`,
+            boxShadow: `0 6px 18px color-mix(in srgb, ${btn} 32%, transparent)`,
+          }}
+        >
+          Receive a letter
+        </span>
+      </div>
+
+      <div className="adm-row" style={{ marginTop: 16 }}>
+        <button className="adm-btn adm-btn--primary" disabled={busy || !changed} onClick={save}>
+          {busy ? "Saving…" : "Save colours"}
+        </button>
+        {changed && (
+          <button className="adm-btn adm-btn--ghost" disabled={busy} onClick={() => { setButtons(theme.buttons); setHeadings(theme.headings); }}>
+            Undo changes
+          </button>
+        )}
+      </div>
+      <div style={{ marginTop: 12 }}><Msg msg={msg} /></div>
+    </section>
+  );
+}
+
+function DesignTab({ data, reload }) {
   const current = data.site_images || {};
   return (
     <>
       <section className="adm-card">
-        <h2>Site images</h2>
+        <h2>Design</h2>
         <p className="adm-help" style={{ margin: 0 }}>
-          The big pictures on the home page. Uploading one puts it on the site straight away; it is
-          shrunk first, and the location a phone stores in a photo is removed.
+          The colours of the site, and its big pictures. Everything saves straight to the site.
+          Pictures are shrunk before upload, and the location a phone stores in a photo is removed.
         </p>
       </section>
+      <ColoursCard theme={data.theme || { buttons: "sage", headings: "sage" }} reload={reload} />
       {SLOTS.map((def) => (
-        <SiteImageCard key={def.slot} def={def} current={current[def.slot]} reload={reload} />
+        <SiteImageCard
+          key={def.slot}
+          def={def}
+          current={current[def.slot]}
+          tone={current.meetText || "light"}
+          savedFrame={current.frames?.[def.slot]}
+          reload={reload}
+        />
       ))}
     </>
   );
@@ -818,7 +1078,7 @@ const TABS = [
   ["edition", "Edition"],
   ["envelope", "Envelope"],
   ["gallery", "Gallery"],
-  ["site", "Site images"],
+  ["site", "Design"],
   ["readers", "Readers"],
   ["prices", "Prices"],
   ["account", "Account"],
@@ -870,7 +1130,7 @@ function Dashboard({ onOut }) {
         {data && tab === "edition" && <EditionTab {...props} />}
         {data && tab === "envelope" && <EnvelopeTab key={data.edition.cycle} {...props} />}
         {data && tab === "gallery" && <GalleryTab {...props} />}
-        {data && tab === "site" && <SiteImagesTab {...props} />}
+        {data && tab === "site" && <DesignTab {...props} />}
         {data && tab === "readers" && <ReadersTab {...props} />}
         {data && tab === "prices" && <PricesTab {...props} />}
         {data && tab === "account" && <AccountTab {...props} onOut={onOut} />}

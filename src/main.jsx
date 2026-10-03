@@ -8,6 +8,12 @@ import "./brand-tokens.css";
  * need media queries. */
 import "./site.css";
 import { warmUp } from "./api.js";
+import useConfig from "./useConfig.js";
+import { applyTheme, rememberedTheme, useSiteTheme } from "./theme.js";
+
+/* The colours chosen in the panel, applied before the first paint from the
+ * last visit, then confirmed from /api/config. */
+applyTheme(rememberedTheme());
 import { usePath, useScrollOnNavigate, interceptLinks } from "./router.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
 import RedRace from "./RedRace.jsx";
@@ -55,6 +61,15 @@ const routeFor = (path) => {
   return ROUTES[key] || NotFound;
 };
 
+/* Every page but the panel follows the chosen colours. The panel reads the
+ * same config for its own preview, so it is skipped here to save a request
+ * before sign-in. */
+function SiteTheme() {
+  const { config } = useConfig();
+  useSiteTheme(config);
+  return null;
+}
+
 function App() {
   const path = usePath();
 
@@ -72,7 +87,12 @@ function App() {
   useScrollOnNavigate(path);
 
   const Page = routeFor(path);
-  return <Page />;
+  return (
+    <>
+      {path !== "/admin" && <SiteTheme />}
+      <Page />
+    </>
+  );
 }
 
 createRoot(document.getElementById("root")).render(

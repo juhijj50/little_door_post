@@ -126,9 +126,21 @@ export const setPlan = (region, months, amount_minor, active) =>
   call(`/admin/plans/${region}/${months}`, { method: "PUT", json: { amount_minor, active } });
 
 /* The hero picture, or a section background: slot is hero | meet | subscribe.
- * A null id puts the site's built-in one back. */
-export const setSiteImage = (slot, media_id) =>
-  call(`/admin/site-images/${slot}`, { method: "PUT", json: { media_id } });
+ * A null id puts the site's built-in one back; leave it undefined to change
+ * only the text colour ("light" or "dark"). Only what is passed is sent. */
+export const setSiteImage = (slot, media_id, text_tone, frame) =>
+  call(`/admin/site-images/${slot}`, {
+    method: "PUT",
+    json: {
+      ...(media_id !== undefined ? { media_id } : {}),
+      ...(text_tone !== undefined ? { text_tone } : {}),
+      /* { pos_x, pos_y, zoom }: where the picture sits in its frame. */
+      ...(frame || {}),
+    },
+  });
+
+/* The colour palettes of the buttons and the headings, by name. */
+export const setTheme = (theme) => call("/admin/theme", { method: "PUT", json: theme });
 
 export const deleteMedia = (id) => call(`/admin/media/${id}`, { method: "DELETE" });
 
