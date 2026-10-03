@@ -132,6 +132,12 @@
 
 /* ── the hero ──────────────────────────────────────────────────────────── */
 
+/* The sparkles round the wordmark: a slow glint, never fully gone. */
+@keyframes ldp-sparkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.7) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(20deg); }
+}
+
 .hero {
   position: relative;
   display: flex;
@@ -168,6 +174,19 @@
 }
 .hero__actions { margin-top: clamp(20px, 3.4vh, 32px); }
 .hero__facts { margin-top: clamp(20px, 3vh, 28px); }
+
+/* On a phone the three facts do not fit on one line, and wrapping them left a
+ * separator dot dangling at the start of the second line. So they stack, one
+ * to a line, and the separators go. */
+@media (max-width: 600px) {
+  .hero__facts {
+    flex-direction: column;
+    gap: 4px !important;
+  }
+  .hero__facts .hero__sep {
+    display: none;
+  }
+}
 
 /* A desktop: the whole hero on one screen, below the header, with nothing to
  * scroll for. Every height is a share of the screen's height, so it fits a

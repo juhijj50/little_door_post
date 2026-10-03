@@ -64,6 +64,38 @@ const NAV = [
 const TORN_EDGE =
   "polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)";
 
+/* A four-pointed sparkle, drawn rather than a round dot — a dot on its own
+ * reads as a speck of dust on the screen. Decorative only. */
+const Sparkle = ({ pos, size, color, delay }) => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    style={css(
+      `position:absolute;${pos};color:${color};pointer-events:none;animation:ldp-sparkle 4.8s ${delay} ease-in-out infinite`
+    )}
+  >
+    <path
+      fill="currentColor"
+      d="M12 0c.9 6.6 4.4 10.4 12 12-7.6 1.6-11.1 5.4-12 12-.9-6.6-4.4-10.4-12-12C7.6 10.4 11.1 6.6 12 0Z"
+    />
+  </svg>
+);
+
+/* [position around the wordmark, size, colour, animation delay]. Two on each
+ * side, staggered high and low, so they balance without mirroring. */
+const SPARKLES = [
+  ["left:-7%;top:14%", 18, "var(--color-accent-2-400)", "0s"],
+  ["left:-2%;top:66%", 10, "#d98f8a", "-1.6s"],
+  ["right:-6%;top:4%", 12, "#d98f8a", "-2.8s"],
+  ["right:-8%;top:56%", 20, "var(--color-accent-400)", "-0.9s"],
+];
+
+/* The separators in the line of facts under the buttons — one colour, so
+ * they read as punctuation rather than decoration. */
+const dot = css("width:4px;height:4px;border-radius:50%;background:var(--color-accent-400);flex:none");
+
 const kicker = css(
   "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-700)"
 );
@@ -152,9 +184,12 @@ function EditionBadge({ edition }) {
   if (!edition) return null;
   const soldOut = edition.status === "sold_out";
   return (
+    /* The dot never wraps away from the words: it is fixed beside them, and if
+     * the words need two lines on a small phone they wrap beside the dot,
+     * left-aligned, rather than leaving it alone on a line of its own. */
     <div
       style={css(
-        "position:relative;display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;padding:7px 16px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;animation:ldp-rise 1s .3s both;" +
+        "position:relative;display:inline-flex;flex-wrap:nowrap;align-items:center;gap:10px;max-width:100%;padding:7px 18px 7px 14px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;text-align:left;animation:ldp-rise 1s .3s both;" +
           (soldOut
             ? "background:#f6e3df;color:#7c2f25;border:1px solid #e6c1b9"
             : "background:var(--color-accent-100);color:var(--color-accent-800);border:1px solid var(--color-accent-300)")
@@ -162,11 +197,11 @@ function EditionBadge({ edition }) {
     >
       <span
         aria-hidden="true"
-        style={css(`width:7px;height:7px;border-radius:50%;background:${soldOut ? "#b5503f" : "var(--color-accent-600)"}`)}
+        style={css(`flex:none;width:7px;height:7px;border-radius:50%;background:${soldOut ? "#b5503f" : "var(--color-accent-600)"}`)}
       />
       {soldOut ? (
         <span>
-          <strong>The {edition.name} edition is sold out</strong> &middot; {edition.next.name} opens soon
+          <strong>{edition.name} is sold out</strong> &middot; {edition.next.name} opens soon
         </span>
       ) : (
         <span>
@@ -215,29 +250,26 @@ export default function TheLittleDoorPost() {
             "position:absolute;left:50%;top:58%;width:min(680px,92vw);aspect-ratio:1;background:radial-gradient(circle, rgba(134,149,92,.20) 0%, transparent 62%);animation:ldp-bloom 7s ease-in-out infinite alternate;pointer-events:none"
           )}
         />
-        <div
-          style={css(
-            "position:absolute;left:16%;top:46%;width:7px;height:7px;border-radius:50%;background:var(--color-accent-2-400);animation:ldp-twinkle 3.6s ease-in-out infinite;pointer-events:none"
-          )}
-        />
-        <div
-          style={css(
-            "position:absolute;right:14%;top:54%;width:6px;height:6px;border-radius:50%;background:#d98f8a;animation:ldp-twinkle 4.4s -1.4s ease-in-out infinite;pointer-events:none"
-          )}
-        />
-
         {/* The badge's height is held while the API answers, so nothing below
           * it jumps when it appears. */}
         <div className="hero__badge" style={css("min-height:36px;display:flex;align-items:center")}>
           <EditionBadge edition={edition} />
         </div>
 
-        <img
-          className="hero__wordmark"
-          src="/assets/wordmark.png"
-          alt="The Little Door Post"
-          style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
-        />
+        {/* The sparkles are placed around the wordmark itself, in percentages
+          * of its box, so they frame it at every screen size instead of
+          * floating loose at the edges of the page. */}
+        <div style={css("position:relative;display:flex;justify-content:center")}>
+          <img
+            className="hero__wordmark"
+            src="/assets/wordmark.png"
+            alt="The Little Door Post"
+            style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
+          />
+          {SPARKLES.map(([pos, size, color, delay]) => (
+            <Sparkle key={pos} pos={pos} size={size} color={color} delay={delay} />
+          ))}
+        </div>
 
         <p
           className="hero__tagline"
@@ -282,9 +314,9 @@ export default function TheLittleDoorPost() {
           )}
         >
           <span>Real places, past and present</span>
-          <span style={css("width:5px;height:5px;border-radius:50%;background:#d98f8a")} />
+          <span aria-hidden="true" className="hero__sep" style={dot} />
           <span>Printed on real paper</span>
-          <span style={css("width:5px;height:5px;border-radius:50%;background:var(--color-accent-2-400)")} />
+          <span aria-hidden="true" className="hero__sep" style={dot} />
           <span>Posted across India and abroad</span>
         </div>
       </section>
