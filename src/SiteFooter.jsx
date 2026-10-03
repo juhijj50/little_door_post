@@ -31,7 +31,7 @@ export default function SiteFooter() {
   return (
     <footer
       style={css(
-        "border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px) clamp(28px,5vh,44px)"
+        "position:relative;background:var(--color-bg);border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px) clamp(28px,5vh,44px)"
       )}
     >
       <div style={css("width:min(1080px,100%);margin:0 auto")}>

@@ -17,11 +17,12 @@
  * right — so the header costs ~60px of the screen, not two rows of it. Its
  * height is a variable because the hero sizes itself to what is left. */
 :root {
-  --header-h: 60px;
+  /* The bar's 60px plus its 1px bottom border. */
+  --header-h: 61px;
 }
 .site-header__bar {
   width: min(1180px, 100%);
-  min-height: var(--header-h);
+  min-height: calc(var(--header-h) - 1px);
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -463,41 +464,6 @@ section[id] {
    Glass
    ══════════════════════════════════════════════════════════════════════ */
 
-/* The colour behind the glass: three soft blooms of the palette, fixed to
- * the screen so the page slides over them as it scrolls. */
-.ambient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.ambient span {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.55;
-}
-.ambient__a {
-  width: 46vmax; height: 46vmax; left: -12vmax; top: 18vh;
-  background: radial-gradient(circle, var(--color-accent-300), transparent 68%);
-  animation: ldp-drift 26s ease-in-out infinite alternate;
-}
-.ambient__b {
-  width: 40vmax; height: 40vmax; right: -10vmax; top: 44vh;
-  background: radial-gradient(circle, var(--color-accent-2-300), transparent 68%);
-  animation: ldp-drift 32s -8s ease-in-out infinite alternate-reverse;
-}
-.ambient__c {
-  width: 34vmax; height: 34vmax; left: 34vw; bottom: -14vmax;
-  background: radial-gradient(circle, #f2c6bf, transparent 68%);
-  animation: ldp-drift 29s -4s ease-in-out infinite alternate;
-}
-@keyframes ldp-drift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(4vmax, -3vmax) scale(1.08); }
-}
-
 /* A pane of frosted glass: translucent paper, blurred and brightened, a
  * bright hairline at its edge, and a shadow that lifts it off the page. */
 .glass {
@@ -577,6 +543,45 @@ section[id] {
  * section its own layer and stop the logo blending into the page (its white
  * background shows as a box). */
 
-@media (prefers-reduced-motion: reduce) {
-  .ambient span { animation: none; }
+/* ── meet Iris on one screen ───────────────────────────────────────────── */
+
+/* A desktop: the section is the screen below the header, and everything in
+ * it is sized from the screen's height — the words, their spacing and Iris
+ * herself — so it fits a 1366×768 laptop and a 1920×1080 monitor alike
+ * without scrolling. Phones keep the stacked layout. */
+@media (min-width: 901px) and (min-height: 560px) {
+  .meet {
+    min-height: calc(100svh - var(--header-h));
+    display: flex;
+    align-items: center;
+    padding: 3svh clamp(20px, 4vw, 44px) !important;
+  }
+  .meet__grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr) !important;
+    gap: clamp(24px, 4vw, 56px) !important;
+  }
+  .meet .meet__panel {
+    padding: 3svh clamp(24px, 2.8vw, 40px);
+  }
+  .meet__title {
+    font-size: clamp(32px, 6.4svh, 64px) !important;
+    margin-top: 1.2svh !important;
+  }
+  .meet__text {
+    font-size: clamp(14px, 1.95svh, 17.5px) !important;
+    line-height: 1.68 !important;
+    margin-top: 1.3svh !important;
+  }
+  .meet__quote {
+    font-size: clamp(18px, 2.9svh, 27px) !important;
+    margin-top: 2svh !important;
+  }
+  .meet__cta {
+    margin-top: 2.2svh !important;
+  }
+  .meet__art {
+    width: auto !important;
+    max-width: 100%;
+    max-height: calc(100svh - var(--header-h) - 10svh);
+  }
 }

@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import "./admin.css";
 import { mediaUrl } from "../api.js";
-import { PALETTES, headingColour } from "../theme.js";
+import { PALETTES, baseOf, headingColour } from "../theme.js";
 import {
   changePassword,
   deleteMedia,
@@ -708,52 +708,209 @@ function SiteImageCard({ def, current, tone, savedFrame, reload }) {
   );
 }
 
-/* One row of palette swatches. */
-function PalettePicker({ label, value, onChange, swatch }) {
+/* ── the colour picker ─────────────────────────────────────────────────── */
+
+/* Colours as hue (0–360), saturation and value (0–1) for the picker, and as
+ * #rrggbb for everything else. */
+const hexToHsv = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) {
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h = (h * 60 + 360) % 360;
+  }
+  return { h, s: max ? d / max : 0, v: max };
+};
+
+const hsvToHex = ({ h, s, v }) => {
+  const f = (k) => {
+    const x = (k + h / 60) % 6;
+    return v - v * s * Math.max(0, Math.min(x, 4 - x, 1));
+  };
+  return "#" + [f(5), f(3), f(1)].map((c) => Math.round(c * 255).toString(16).padStart(2, "0")).join("");
+};
+
+/* How light a colour is, 0 (black) to 1 (white) — to warn when white button
+ * text would not read on it. */
+const lightness = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const lin = (c) => {
+    c /= 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+};
+
+const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+function ColourPicker({ value, onChange }) {
+  const [hsv, setHsv] = useState(() => hexToHsv(value));
+  const [text, setText] = useState(value);
+  const box = useRef(null);
+  const dragging = useRef(false);
+
+  /* Follow a value set from outside (a saved colour, Undo). */
+  useEffect(() => {
+    if (hsvToHex(hsv) !== value.toLowerCase()) setHsv(hexToHsv(value));
+    setText(value);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const commit = (next) => {
+    setHsv(next);
+    const hex = hsvToHex(next);
+    setText(hex);
+    onChange(hex);
+  };
+
+  const fromPointer = (e) => {
+    const r = box.current.getBoundingClientRect();
+    const s = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const v = 1 - Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    commit({ ...hsv, s, v });
+  };
+
+  const typed = (raw) => {
+    const t = raw.startsWith("#") ? raw : `#${raw}`;
+    setText(t);
+    if (HEX_RE.test(t)) {
+      setHsv(hexToHsv(t));
+      onChange(t.toLowerCase());
+    }
+  };
+
   return (
-    <div>
-      <span className="adm-label">{label}</span>
-      <div role="radiogroup" aria-label={label} style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        {Object.entries(PALETTES).map(([id, p]) => (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            aria-checked={value === id}
-            title={p.name}
-            onClick={() => onChange(id)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 12px 6px 6px",
-              borderRadius: 999,
-              border: value === id ? "2px solid var(--color-text)" : "1px solid var(--color-neutral-300)",
-              background: "#fff",
-              cursor: "pointer",
-              font: "inherit",
-              fontSize: 13,
-            }}
-          >
-            <span style={{ width: 24, height: 24, borderRadius: "50%", background: swatch(id), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.1)" }} />
-            {p.name}
-          </button>
-        ))}
+    <div style={{ display: "grid", gap: 12, width: "min(100%, 300px)" }}>
+      {/* Saturation across, brightness down, in the chosen hue. */}
+      <div
+        ref={box}
+        role="slider"
+        aria-label="Shade"
+        aria-valuetext={hsvToHex(hsv)}
+        tabIndex={0}
+        onPointerDown={(e) => {
+          dragging.current = true;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          fromPointer(e);
+        }}
+        onPointerMove={(e) => dragging.current && fromPointer(e)}
+        onPointerUp={() => (dragging.current = false)}
+        onPointerCancel={() => (dragging.current = false)}
+        onKeyDown={(e) => {
+          const step = 0.02;
+          const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+          if (!moves[e.key]) return;
+          e.preventDefault();
+          const [ds, dv] = moves[e.key];
+          commit({ ...hsv, s: Math.min(1, Math.max(0, hsv.s + ds)), v: Math.min(1, Math.max(0, hsv.v + dv)) });
+        }}
+        style={{
+          position: "relative",
+          height: 180,
+          borderRadius: 12,
+          cursor: "crosshair",
+          touchAction: "none",
+          background: `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsv.h} 100% 50%))`,
+          boxShadow: "inset 0 0 0 1px rgba(0,0,0,.08)",
+        }}
+      >
+        <span
+          style={{
+            position: "absolute",
+            left: `${hsv.s * 100}%`,
+            top: `${(1 - hsv.v) * 100}%`,
+            width: 16,
+            height: 16,
+            marginLeft: -8,
+            marginTop: -8,
+            borderRadius: "50%",
+            border: "2px solid #fff",
+            boxShadow: "0 0 0 1px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.3)",
+            background: hsvToHex(hsv),
+            pointerEvents: "none",
+          }}
+        />
+      </div>
+
+      {/* The hue, round the colour wheel. */}
+      <input
+        type="range"
+        min={0}
+        max={359}
+        value={Math.round(hsv.h)}
+        aria-label="Hue"
+        onChange={(e) => commit({ ...hsv, h: Number(e.target.value) })}
+        className="adm-hue"
+      />
+
+      <div className="adm-row" style={{ flexWrap: "nowrap" }}>
+        <span style={{ width: 36, height: 36, flex: "none", borderRadius: 10, background: hsvToHex(hsv), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.1)" }} />
+        <label style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+          <span className="adm-label" style={{ margin: 0 }}>Hex</span>
+          <input
+            className="adm-input"
+            value={text}
+            maxLength={7}
+            spellCheck={false}
+            onChange={(e) => typed(e.target.value.trim())}
+            style={{ fontFamily: "ui-monospace, monospace", textTransform: "uppercase" }}
+            aria-label="Hex colour"
+          />
+        </label>
+      </div>
+
+      {/* The named palettes, as saved colours to start from. */}
+      <div>
+        <span className="adm-label">Saved colours</span>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {Object.entries(PALETTES).map(([id, p]) => (
+            <button
+              key={id}
+              type="button"
+              title={p.name}
+              aria-label={p.name}
+              onClick={() => commit(hexToHsv(p.base))}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                padding: 0,
+                cursor: "pointer",
+                background: p.base,
+                border: value.toLowerCase() === p.base ? "2px solid var(--color-text)" : "2px solid #fff",
+                boxShadow: "0 0 0 1px rgba(0,0,0,.15)",
+              }}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+/* A stored choice (palette name or hex) as a hex for the picker, and back:
+ * a colour that is exactly a palette is saved under the palette's name, so
+ * Sage stays the original hand-tuned design. */
+const toHex = (choice) => baseOf(choice) || PALETTES.sage.base;
+const toChoice = (hex) =>
+  Object.entries(PALETTES).find(([, p]) => p.base === hex.toLowerCase())?.[0] || hex.toLowerCase();
+
 function ColoursCard({ theme, reload }) {
-  const [buttons, setButtons] = useState(theme.buttons);
-  const [headings, setHeadings] = useState(theme.headings);
+  const [buttons, setButtons] = useState(toHex(theme.buttons));
+  const [headings, setHeadings] = useState(toHex(theme.headings));
+  const [editing, setEditing] = useState("buttons");
   const { busy, msg, run } = useAction();
-  const changed = buttons !== theme.buttons || headings !== theme.headings;
-  const btn = PALETTES[buttons].base;
-  const head = headingColour(headings);
+  const changed = toChoice(buttons) !== theme.buttons || toChoice(headings) !== theme.headings;
+  const tooLight = lightness(buttons) > 0.42;
 
   const save = async () => {
-    const done = await run(() => setTheme({ buttons, headings }), "Saved — the site uses these colours now.");
+    const done = await run(
+      () => setTheme({ buttons: toChoice(buttons), headings: toChoice(headings) }),
+      "Saved — the site uses these colours now."
+    );
     if (done) reload();
   };
 
@@ -761,44 +918,71 @@ function ColoursCard({ theme, reload }) {
     <section className="adm-card">
       <h3>Colours</h3>
       <p className="adm-help">
-        One palette for the buttons (and the highlights that go with them), one for the headings.
-        Sage is the original look.
+        Pick any colour for the buttons (and the highlights that go with them) and for the headings
+        — drag in the box, slide the hue, or type a hex code. The saved colours are ready-made
+        palettes; Sage is the original look.
       </p>
-      <div style={{ display: "grid", gap: 18 }}>
-        <PalettePicker label="Buttons" value={buttons} onChange={setButtons} swatch={(id) => PALETTES[id].base} />
-        <PalettePicker label="Headings" value={headings} onChange={setHeadings} swatch={(id) => headingColour(id)} />
+
+      <div className="adm-row" role="tablist" aria-label="Which colour" style={{ marginBottom: 14 }}>
+        {[["buttons", "Buttons", buttons], ["headings", "Headings", headings]].map(([key, label, hex]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={editing === key}
+            className={`adm-btn${editing === key ? " adm-btn--primary" : ""}`}
+            onClick={() => setEditing(key)}
+          >
+            <span style={{ width: 14, height: 14, borderRadius: "50%", background: hex, boxShadow: "0 0 0 2px rgba(255,255,255,.8)" }} />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* A small piece of the site in the chosen colours. */}
-      <div
-        style={{
-          marginTop: 18,
-          padding: "22px 24px",
-          borderRadius: 18,
-          background: `linear-gradient(135deg, color-mix(in oklab, ${btn} 14%, #fffdf7), #fffdf7 60%, color-mix(in oklab, ${PALETTES[headings].base} 12%, #fffdf7))`,
-          border: "1px solid var(--color-neutral-300)",
-        }}
-      >
-        <div style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 600, color: PALETTES[headings].base }}>
-          Preview
-        </div>
-        <div style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 32, lineHeight: 1.1, margin: "6px 0 14px", color: head }}>
-          What&rsquo;s in the envelope
-        </div>
-        <span
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start" }}>
+        {editing === "buttons" ? (
+          <ColourPicker key="buttons" value={buttons} onChange={setButtons} />
+        ) : (
+          <ColourPicker key="headings" value={headings} onChange={setHeadings} />
+        )}
+
+        {/* A small piece of the site in the chosen colours. */}
+        <div
           style={{
-            display: "inline-flex",
-            padding: "11px 22px",
-            borderRadius: 999,
-            color: "#fff",
-            fontFamily: "var(--font-heading)",
-            fontWeight: 600,
-            background: `linear-gradient(180deg, color-mix(in oklab, ${btn} 84%, #fffdf7), ${btn} 55%, color-mix(in oklab, ${btn} 80%, #14110d))`,
-            boxShadow: `0 6px 18px color-mix(in srgb, ${btn} 32%, transparent)`,
+            flex: "1 1 260px",
+            padding: "22px 24px",
+            borderRadius: 18,
+            background: `linear-gradient(135deg, color-mix(in oklab, ${buttons} 12%, #fffdf7), #fffdf7 60%, color-mix(in oklab, ${headings} 10%, #fffdf7))`,
+            border: "1px solid var(--color-neutral-300)",
           }}
         >
-          Receive a letter
-        </span>
+          <div style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 600, color: headings }}>
+            Preview
+          </div>
+          <div style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 32, lineHeight: 1.1, margin: "6px 0 14px", color: headingColour(headings) }}>
+            What&rsquo;s in the envelope
+          </div>
+          <span
+            style={{
+              display: "inline-flex",
+              padding: "11px 22px",
+              borderRadius: 999,
+              color: "#fff",
+              fontFamily: "var(--font-heading)",
+              fontWeight: 600,
+              background: `linear-gradient(180deg, color-mix(in oklab, ${buttons} 84%, #fffdf7), ${buttons} 55%, color-mix(in oklab, ${buttons} 80%, #14110d))`,
+              boxShadow: `0 6px 18px color-mix(in srgb, ${buttons} 32%, transparent)`,
+            }}
+          >
+            Receive a letter
+          </span>
+          {tooLight && (
+            <p className="adm-help" style={{ margin: "12px 0 0", color: "#8c2523" }}>
+              This button colour is very light — the white writing on it may be hard to read. A
+              deeper shade works better.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="adm-row" style={{ marginTop: 16 }}>
@@ -806,7 +990,11 @@ function ColoursCard({ theme, reload }) {
           {busy ? "Saving…" : "Save colours"}
         </button>
         {changed && (
-          <button className="adm-btn adm-btn--ghost" disabled={busy} onClick={() => { setButtons(theme.buttons); setHeadings(theme.headings); }}>
+          <button
+            className="adm-btn adm-btn--ghost"
+            disabled={busy}
+            onClick={() => { setButtons(toHex(theme.buttons)); setHeadings(toHex(theme.headings)); }}
+          >
             Undo changes
           </button>
         )}

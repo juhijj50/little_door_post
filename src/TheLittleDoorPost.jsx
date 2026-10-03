@@ -267,13 +267,6 @@ export default function TheLittleDoorPost() {
 
   return (
     <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:clip")}>
-      {/* Soft blooms of the palette's colours, fixed behind the page. Glass
-        * is only glass when there is colour behind it to blur. */}
-      <div className="ambient" aria-hidden="true">
-        <span className="ambient__a" />
-        <span className="ambient__b" />
-        <span className="ambient__c" />
-      </div>
       <SiteHeader />
 
       {/* ── hero ───────────────────────────────────────────────────────── */}
@@ -368,6 +361,7 @@ export default function TheLittleDoorPost() {
       {/* ── meet Iris ──────────────────────────────────────────────────── */}
       <section
         id="meet"
+        className="meet"
         style={{
           ...css(
             "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background-color:var(--color-accent-800);overflow:hidden"
@@ -398,6 +392,7 @@ export default function TheLittleDoorPost() {
           />
         )}
         <div
+          className="meet__grid"
           style={css(
             "position:relative;width:min(1120px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:clamp(26px,5vw,60px);align-items:center"
           )}
@@ -412,23 +407,24 @@ export default function TheLittleDoorPost() {
               <span style={{ ...css("width:26px;height:1px"), background: meetAccent }} />
               The letter-writer
             </div>
-            <h2 style={{ ...css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0"), color: meetInk }}>
+            <h2 className="meet__title" style={{ ...css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0"), color: meetInk }}>
               Meet Iris
             </h2>
-            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:clamp(16px,2.6vh,24px) 0 0;text-wrap:pretty")}>
+            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:clamp(16px,2.6vh,24px) 0 0;text-wrap:pretty")}>
               Somewhere between worlds there is a girl with red curls and a suitcase full of paper.
             </p>
-            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
+            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
               She travels through doors, one to the next, and every door opens somewhere real. A
               market town that still wakes before dawn. A harbour the sea swallowed centuries ago. A
               village with a single road in. A library that burned two thousand years back.
             </p>
-            <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
+            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
               Some of these corners are famous. Most are not. Wherever she lands, she meets the
               people who live there &mdash; or lived there once &mdash; and writes it all home:
               printed, folded and sealed by one pair of hands.
             </p>
             <p
+              className="meet__quote"
               style={{
                 ...css(
                   "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);text-wrap:pretty"
@@ -439,7 +435,7 @@ export default function TheLittleDoorPost() {
               The world has never once run out of corners.
             </p>
             <a
-              className="btn btn-primary"
+              className="btn btn-primary meet__cta"
               href="/red-race"
               style={css(
                 "margin-top:clamp(20px,3vh,28px);padding:12px 22px;font-size:15px;background:var(--color-accent-300);border-color:var(--color-accent-300);color:var(--color-accent-900)"
@@ -452,6 +448,7 @@ export default function TheLittleDoorPost() {
             <img
               src="/assets/iris.webp"
               alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her"
+              className="meet__art"
               style={css("width:min(420px,84%);filter:drop-shadow(0 24px 40px rgba(20,26,16,.42));animation:ldp-sway 9s ease-in-out infinite alternate")}
             />
           </div>

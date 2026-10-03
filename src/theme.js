@@ -1,6 +1,7 @@
 /*  The colour palettes, chosen in the admin panel's Design tab.
  *
- *  Two choices from the one list: the buttons (with the highlights that go
+ *  Two choices, each a palette from the list below or any colour picked
+ *  with the panel's colour picker: the buttons (with the highlights that go
  *  with them — selected plans, borders, links, the Meet Iris green) and the
  *  headings (titles and the small capitals above them).
  *
@@ -29,24 +30,31 @@ export const PALETTES = {
 
 export const DEFAULT_PALETTE = "sage";
 
-/* The heading colour for a palette: its base deepened, so titles read as
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/* A choice is a palette name or any colour as #rrggbb (from the colour
+ * picker). Either way it comes down to one base colour. */
+export const baseOf = (choice) =>
+  PALETTES[choice]?.base || (HEX.test(choice || "") ? choice : null);
+
+/* The heading colour for a choice: its base deepened, so titles read as
  * titles on cream and on glass alike. */
-export const headingColour = (id) =>
-  `color-mix(in oklab, ${PALETTES[id]?.base || PALETTES.sage.base} 70%, #14110d)`;
+export const headingColour = (choice) =>
+  `color-mix(in oklab, ${baseOf(choice) || PALETTES.sage.base} 70%, #14110d)`;
 
 const KEY = "ldp.theme.v1";
 
 export function applyTheme(theme) {
   const root = document.documentElement;
-  const buttons = PALETTES[theme?.buttons] ? theme.buttons : DEFAULT_PALETTE;
-  const headings = PALETTES[theme?.headings] ? theme.headings : DEFAULT_PALETTE;
+  const buttons = baseOf(theme?.buttons) ? theme.buttons : DEFAULT_PALETTE;
+  const headings = baseOf(theme?.headings) ? theme.headings : DEFAULT_PALETTE;
 
   if (buttons === DEFAULT_PALETTE) {
     delete root.dataset.buttons;
     root.style.removeProperty("--btn-base");
   } else {
     root.dataset.buttons = buttons;
-    root.style.setProperty("--btn-base", PALETTES[buttons].base);
+    root.style.setProperty("--btn-base", baseOf(buttons));
   }
 
   if (headings === DEFAULT_PALETTE) {
@@ -56,7 +64,7 @@ export function applyTheme(theme) {
   } else {
     root.dataset.headings = headings;
     root.style.setProperty("--heading-color", headingColour(headings));
-    root.style.setProperty("--heading-soft", PALETTES[headings].base);
+    root.style.setProperty("--heading-soft", baseOf(headings));
   }
 }
 
