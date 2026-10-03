@@ -15,6 +15,7 @@ import React, { useState } from "react";
 import { css } from "./css.js";
 import { business } from "./business.js";
 import { registerInternationalInterest } from "./api.js";
+import { useRateCard } from "./useConfig.js";
 
 const { international: intl } = business;
 
@@ -28,6 +29,8 @@ export default function GlobalWaitlist() {
   const [error, setError] = useState("");
   const [fieldErrs, setFieldErrs] = useState({});
   const [done, setDone] = useState(null);
+  /* The price abroad, live from the plans table like every other price. */
+  const abroad = useRateCard().international[0];
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -84,27 +87,51 @@ export default function GlobalWaitlist() {
               "font-family:var(--font-heading);font-weight:600;font-size:clamp(30px,5vw,50px);line-height:1.06;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-accent-800);text-wrap:pretty"
             )}
           >
-            Not in India? Not yet &mdash; but soon.
+            {intl.live ? "Somewhere we don't post yet?" : "Not in India? Not yet — but soon."}
           </h2>
 
-          <p
-            style={css(
-              "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
-            )}
-          >
-            Iris posts across India today, and nowhere else. Sending paper over a border needs an
-            export process set up first, and{" "}
-            <strong>that is the part being worked on right now.</strong>
-          </p>
-          <p
-            style={css(
-              "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:var(--space-3) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
-            )}
-          >
-            If it comes through, everyone on this list hears from us{" "}
-            <strong>within about {intl.setupDays} days.</strong> If it does not, you will hear that
-            too &mdash; we would rather tell you plainly than leave you refreshing the page.
-          </p>
+          {intl.live ? (
+            <>
+              <p
+                style={css(
+                  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
+                )}
+              >
+                Iris now posts to a good part of the world &mdash;{" "}
+                <a href="#subscribe">the country list is on the order form</a>. If yours is not on
+                it, leave your name and we will write when it is.
+              </p>
+              <p
+                style={css(
+                  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:var(--space-3) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
+                )}
+              >
+                Countries go on the list as the postage is worked out, and the ones with readers
+                waiting go first &mdash; which is what this is for.
+              </p>
+            </>
+          ) : (
+            <>
+              <p
+                style={css(
+                  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
+                )}
+              >
+                Iris posts across India today, and nowhere else. Sending paper over a border needs
+                an export process set up first, and{" "}
+                <strong>that is the part being worked on right now.</strong>
+              </p>
+              <p
+                style={css(
+                  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:var(--space-3) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
+                )}
+              >
+                If it comes through, everyone on this list hears from us{" "}
+                <strong>within about {intl.setupDays} days.</strong> If it does not, you will hear
+                that too.
+              </p>
+            </>
+          )}
 
           <div
             style={css(
@@ -116,14 +143,14 @@ export default function GlobalWaitlist() {
                 "font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-neutral-600)"
               )}
             >
-              What it will cost
+              What it costs
             </div>
             <div
               style={css(
                 "font-family:var(--font-heading);font-weight:600;font-size:clamp(26px,4.2vw,34px);line-height:1.1;margin-top:6px;color:var(--color-accent-800)"
               )}
             >
-              ${intl.indicativeUsdPerLetter} a letter
+              {abroad ? `${abroad.total} a letter` : "…"}
             </div>
             <p
               style={css(
@@ -139,10 +166,11 @@ export default function GlobalWaitlist() {
                 "font-size:13px;line-height:1.7;margin:10px 0 0;color:var(--color-neutral-700)"
               )}
             >
-              <strong>An estimate, not a final price</strong> &mdash; it cannot be fixed until the
-              export process is. Any customs duty or import tax your own country charges is
-              separate and is set by them, not by us:{" "}
-              <a href="/shipping">how that works</a>.
+              {intl.live
+                ? "That is the price on the order form today."
+                : "An estimate, not a final price — it cannot be fixed until the export process is."}{" "}
+              Any customs duty or import tax your own country charges is separate and is set by
+              them, not by us: <a href="/shipping">how that works</a>.
             </p>
           </div>
         </div>
@@ -336,10 +364,9 @@ export default function GlobalWaitlist() {
                   "font-size:11px;line-height:1.6;margin:0;padding-top:var(--space-2);border-top:1px solid var(--color-neutral-300);color:var(--color-neutral-600)"
                 )}
               >
-                One exception, and we would rather say it now: we do not expect to post to{" "}
-                {intl.excluded.short}. Consumer law there asks for a returns process we cannot run
-                from a two-person workshop in Gujarat &mdash;{" "}
-                <a href="/shipping">the reasoning is here</a>.
+                One exception, and we would rather say it now: we do not post anywhere in{" "}
+                {intl.excluded.short} &mdash; {intl.excluded.reason}.{" "}
+                <a href="/shipping">The reasoning is here</a>.
               </p>
             </form>
           )}

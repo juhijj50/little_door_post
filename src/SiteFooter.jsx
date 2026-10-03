@@ -48,14 +48,14 @@ export default function SiteFooter() {
           >
             The Little Door Post
           </a>
-          {/* Iris posts within India and nowhere else — the backend refuses an
-            * international sign-up outright. The footer has to say the same. */}
+          {/* Kept in step with business.international.live: the footer must not
+            * promise post abroad while the order form refuses it. */}
           <div
             style={css(
               "font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)"
             )}
           >
-            One envelope a month · Posted across India
+            One envelope a month · Posted across India{business.international.live ? " and abroad" : ""}
           </div>
         </div>
 

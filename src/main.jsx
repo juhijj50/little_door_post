@@ -1,9 +1,12 @@
-import React, { useEffect } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 /* The redesign's tokens, layered over the component sheet above. See the file
  * header — fold it into styles.css if you would rather keep one stylesheet. */
 import "./brand-tokens.css";
+/* The landing page's header menu, envelope grid and gallery — the parts that
+ * need media queries. */
+import "./site.css";
 import { warmUp } from "./api.js";
 import { usePath, useScrollOnNavigate, interceptLinks } from "./router.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
@@ -16,6 +19,15 @@ import Pricing from "./legal/Pricing.jsx";
 import Contact from "./legal/Contact.jsx";
 import Grievance from "./legal/Grievance.jsx";
 import NotFound from "./legal/NotFound.jsx";
+
+/* The admin panel is its own chunk, fetched only when /admin is opened — a
+ * reader never downloads it. */
+const Admin = lazy(() => import("./admin/Admin.jsx"));
+const AdminPage = () => (
+  <Suspense fallback={<div style={{ padding: 40, fontFamily: "var(--font-body)" }}>Loading…</div>}>
+    <Admin />
+  </Suspense>
+);
 
 /* One landing page, one letter, and seven policy pages. The router is ours and
  * lives in router.js — 100 lines, no dependency, and no more than this needs.
@@ -32,6 +44,7 @@ const ROUTES = {
   "/pricing": Pricing,
   "/contact": Contact,
   "/grievance": Grievance,
+  "/admin": AdminPage,
 };
 
 /* A tolerant lookup: /terms, /terms/ and /Terms are the same page. Somebody
@@ -51,7 +64,8 @@ function App() {
    * pages too: a reader who has just read the refund policy is exactly the
    * reader about to subscribe. */
   useEffect(() => {
-    warmUp();
+    if (path !== "/admin") warmUp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(interceptLinks, []);

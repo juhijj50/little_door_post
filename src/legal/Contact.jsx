@@ -177,8 +177,8 @@ export default function Contact() {
       <h2>What to write about</h2>
       <ul>
         <li>
-          <strong>Your address has changed.</strong> Tell us before the{" "}
-          {business.window.closesDay} and that month&rsquo;s envelope follows you.
+          <strong>Your address has changed.</strong> Tell us before the {business.cancelBy} of
+          the edition&rsquo;s month and that edition&rsquo;s envelope follows you.
         </li>
         <li>
           <strong>It has not arrived, or it arrived damaged.</strong> We replace it free — see{" "}

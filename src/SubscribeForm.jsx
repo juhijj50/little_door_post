@@ -26,8 +26,9 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "./css.js";
-import { createSubscription, getConfig, loadRazorpayCheckout, verifyPayment } from "./api.js";
+import { createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
 import { business } from "./business.js";
+import useConfig from "./useConfig.js";
 
 const STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
@@ -39,6 +40,9 @@ const STATES = [
 ];
 
 const EMPTY = {
+  /* India unless they say otherwise. It is where most readers are, and it
+   * keeps the form one click shorter for them. */
+  country: "India",
   plan_months: 1,
   first_name: "", last_name: "", email: "",
   phone_cc: "+91", phone_number: "", instagram: "", birthdate: "",
@@ -161,7 +165,14 @@ const REQUIRED = {
   where: ["address_line1", "city", "state", "pincode"],
 };
 
+/* Abroad, an address is whatever that country's post office expects, and a
+ * form cannot know. Street and city are asked for; the rest is one free line,
+ * because a required "state" would be nonsense in Singapore and a six-digit
+ * PIN rule would be wrong everywhere but India. */
+const REQUIRED_ABROAD = ["address_line1", "city"];
+
 const LABELS = {
+  country: "country",
   first_name: "first name", last_name: "last name", email: "email",
   phone_number: "phone number", instagram: "Instagram handle", birthdate: "birthday",
   address_line1: "street address", city: "city", state: "state", pincode: "PIN code",
@@ -411,12 +422,45 @@ const Notice = ({ tone = "error", children }) =>
     </p>
   );
 
+/* The edition is sold out — set by hand from the admin panel. Said instead of
+ * the form, rather than letting somebody fill in an address and find out at
+ * the last step. Whatever they had typed is kept in the draft for next month. */
+const SoldOut = ({ edition }) => (
+  <div
+    style={css(
+      "border:1px solid #e6c1b9;border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:#fbf0ed;text-align:center"
+    )}
+  >
+    <div
+      style={css(
+        "font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7c2f25"
+      )}
+    >
+      Sold out
+    </div>
+    <h3
+      style={css(
+        "font-family:var(--font-heading);font-weight:600;font-size:clamp(24px,4.2vw,32px);line-height:1.2;color:var(--color-accent-800);margin:8px 0 0"
+      )}
+    >
+      The {edition.name} edition is sold out.
+    </h3>
+    <p style={css("font-size:15px;line-height:1.75;margin:14px auto 0;max-width:40ch;color:var(--color-neutral-700)")}>
+      The <strong>{edition.next.name}</strong> edition opens soon. Iris says when on Instagram, at{" "}
+      <a href={`https://instagram.com/${business.instagram}`} target="_blank" rel="noreferrer noopener">
+        @{business.instagram}
+      </a>
+      .
+    </p>
+  </div>
+);
+
 export default function SubscribeForm({ onSealed, onUnsealed }) {
-  const [config, setConfig] = useState(null);
-  /* Only ever a warning. The form does not need /config to work — it carries
-   * the price and nothing else — so a slow or missing answer must not be
-   * allowed to bar the way. */
-  const [configFailed, setConfigFailed] = useState(false);
+  /* Only ever a warning if it fails. The form does not need /config to work —
+   * it carries the price and nothing else — so a slow or missing answer must
+   * not be allowed to bar the way. */
+  const { config, failed: configFailed } = useConfig();
+  const edition = config?.edition;
 
   /* Read once, lazily, so a restored draft is in the very first render and
    * the reader never sees an empty form flash back to a full one. */
@@ -443,16 +487,6 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
    * act, and specifically not "automatic means such as pre-ticked checkboxes". */
   const [agreed, setAgreed] = useState(false);
 
-  useEffect(() => {
-    let live = true;
-    getConfig()
-      .then((c) => live && setConfig(c))
-      .catch(() => live && setConfigFailed(true));
-    return () => {
-      live = false;
-    };
-  }, []);
-
   /* Kept up to date as they type. Writing on every keystroke is fine — it is
    * a few hundred bytes to the same key, and the alternative is deciding when
    * a pause is long enough to count, which is how drafts get lost. */
@@ -468,31 +502,39 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
 
   const onChange = useCallback((e) => set(e.target.name, e.target.value), [set]);
 
-  const livePlans = config?.plans?.india || [];
+  /* India or abroad, worked out from the country they chose rather than asked
+   * as a separate question. It decides three things: which rate card applies,
+   * which currency they are charged in, and what an address looks like. */
+  const region = values.country === "India" ? "india" : "international";
+  const abroad = region === "international";
 
-  /* Falling back to the rate card in business.js rather than to nothing.
-   * It mirrors the plans table, and the amount actually charged is computed
-   * server-side from that same table — so the worst case here is a figure that
-   * is briefly out of date, shown again from the server on the pay step before
-   * a rupee moves. An empty list, by contrast, is a dead end. */
-  const fallbackPlans = useMemo(
-    () =>
-      business.plans.map((p) => ({
-        months: p.months,
-        rateDisplay: p.rate,
-        totalDisplay: p.total,
-        note: p.note,
-      })),
-    []
-  );
+  /* The countries the post actually goes to, from the API — the same list the
+   * server enforces, so the dropdown cannot offer somewhere an order would be
+   * refused for. Europe is absent on purpose; see business.international. */
+  const countries = config?.countries || [];
 
-  const plans = livePlans.length ? livePlans : configFailed ? fallbackPlans : [];
-  const plansPending = !livePlans.length && !configFailed;
+  /* Prices come from the plans table and nowhere else — there is no copy in
+   * the code to fall back on, so nobody is ever shown a figure the checkout
+   * would not charge. While the API wakes the picker shows a placeholder; if
+   * it cannot be reached at all, the reader is asked to refresh. */
+  const plans = config?.plans?.[region] || [];
+  const plansPending = !config && !configFailed;
+  const plansMissing = !plansPending && !plans.length;
+
+  /* A length on sale in India may not be on sale abroad (abroad is one letter
+   * only). Switching country moves the choice to the nearest length that is,
+   * rather than carrying a plan the server would refuse. */
+  useEffect(() => {
+    if (plans.length && !plans.some((p) => p.months === values.plan_months)) {
+      set("plan_months", plans[0].months);
+    }
+  }, [plans, values.plan_months, set]);
 
   /* Open the next part, or say what is still blank. Checked here rather than
    * left to the browser so the message names the field in words. */
   const advance = (which, next) => {
-    const missing = REQUIRED[which].filter((k) => !String(values[k] || "").trim());
+    const fields = which === "where" && abroad ? REQUIRED_ABROAD : REQUIRED[which];
+    const missing = fields.filter((k) => !String(values[k] || "").trim());
     if (missing.length) {
       setFieldErrs(Object.fromEntries(missing.map((k) => [k, `Iris needs your ${LABELS[k]}.`])));
       setFormError(`Still to fill in: ${missing.map((k) => LABELS[k]).join(", ")}.`);
@@ -534,7 +576,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
   const payload = useMemo(() => {
     const clean = (s) => (typeof s === "string" ? s.trim() : s);
     return {
-      region: "india",
+      region,
       plan_months: values.plan_months,
       first_name: clean(values.first_name),
       last_name: clean(values.last_name),
@@ -551,17 +593,18 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       address_line2: clean(values.address_line2) || null,
       landmark: clean(values.landmark) || null,
       city: clean(values.city),
-      state: clean(values.state),
-      pincode: clean(values.pincode),
-      country: "India",
+      state: clean(values.state) || null,
+      pincode: clean(values.pincode) || null,
+      country: clean(values.country),
     };
-  }, [values]);
+  }, [values, region]);
 
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
 
-    const missing = [...REQUIRED.who, ...REQUIRED.where].filter((k) => !String(values[k] || "").trim());
+    const needed = [...REQUIRED.who, ...(abroad ? REQUIRED_ABROAD : REQUIRED.where)];
+    const missing = needed.filter((k) => !String(values[k] || "").trim());
     if (missing.length) {
       setFieldErrs(Object.fromEntries(missing.map((k) => [k, `Iris needs your ${LABELS[k]}.`])));
       setFormError(`Still to fill in: ${missing.map((k) => LABELS[k]).join(", ")}.`);
@@ -735,7 +778,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             <span style={css("font-size:15px;line-height:1.5")}>
               {subscription.plan_months} {subscription.plan_months === 1 ? "month" : "months"}
               <span style={css("display:block;font-size:13px;color:var(--color-neutral-600)")}>
-                Starts with the {monthName(subscription.cycle)} letter
+                Starts with the {monthName(subscription.cycle)} edition
               </span>
             </span>
             <span style={css("font-family:var(--font-heading);font-size:clamp(24px,4.4vw,30px);line-height:1;white-space:nowrap")}>
@@ -812,7 +855,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
         <p style={css("font-size:15px;line-height:1.7;margin:var(--space-3) 0")}>
           {paid.amount ? <><strong>{paid.amount}</strong> paid for </> : "Paid for "}
           {paid.months} {paid.months === 1 ? "month" : "months"}. Your first letter goes out with the{" "}
-          {monthName(paid.cycle)} post.
+          {monthName(paid.cycle)} edition.
         </p>
 
         <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")}>
@@ -834,6 +877,9 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       </div>
     );
   }
+
+  /* ── sold out ──────────────────────────────────────────────────────── */
+  if (edition?.status === "sold_out") return <SoldOut edition={edition} />;
 
   /* ── the form ──────────────────────────────────────────────────────── */
   return (
@@ -860,16 +906,82 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       {/* 1 ── the subscription ─────────────────────────────────────────── */}
       {part === 1 && (
       <Part first>
-        <Legend>1 &middot; Choose a subscription</Legend>
-        {/* What this says depends on what is actually on sale. Promising a
-          * better rate for a longer subscription while only one length is
-          * offered is a promise the page cannot keep. */}
-        <p style={{ ...muted, margin: 0 }}>
-          Postage within India is included.{" "}
-          {plans.length > 1
-            ? "A longer subscription is a better monthly rate, not a different envelope."
-            : "One envelope, posted to your address — longer subscriptions are coming back shortly."}
-        </p>
+        <Legend>1 &middot; Where is it going?</Legend>
+        {edition && (
+          <p style={{ ...muted, margin: "-4px 0 0" }}>
+            Your subscription starts with the <strong>{edition.name}</strong> edition.
+          </p>
+        )}
+
+        {/* Two choices, not a list of two hundred. Most readers are in India
+          * and should not have to scroll past Afghanistan to say so; everyone
+          * else picks their country once "Somewhere else" is chosen.
+          *
+          * Asked before the plan because it decides the currency the plan is
+          * priced in. */}
+        <div
+          role="radiogroup" aria-label="Where is it going?"
+          style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:var(--space-2)")}
+        >
+          {[
+            ["India", "India", "Posted anywhere in India"],
+            ["", "Somewhere else", "Posted worldwide, outside Europe"],
+          ].map(([value, label, blurb]) => {
+            const on = value ? values.country === "India" : abroad;
+            return (
+              <label
+                key={label}
+                className="radio"
+                style={css(
+                  "display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:var(--radius-md);font-size:15px;" +
+                    (on
+                      ? "border:1px solid var(--color-accent-500);background:var(--color-accent-100)"
+                      : "border:1px solid var(--color-neutral-300);background:var(--color-neutral-100)")
+                )}
+              >
+                <input
+                  type="radio" name="where_to" checked={on}
+                  onChange={() => set("country", value ? "India" : "")}
+                />
+                <span className="dot" style={css("margin-top:3px")} />
+                <span>
+                  <span style={css("font-family:var(--font-heading);font-weight:600;font-size:17px;color:var(--color-accent-800);display:block")}>
+                    {label}
+                  </span>
+                  <span style={css("font-size:13px;color:var(--color-neutral-600)")}>{blurb}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+
+        {/* Said plainly, and said here rather than discovered at the last
+          * step. The server refuses these countries too — this list simply
+          * does not offer them. */}
+        {abroad && (
+          <>
+            <Field id="ldp-country" label="Which country?" error={fieldErrs.country}>
+              <select
+                className="input" id="ldp-country" name="country" required
+                autoComplete="country-name" value={values.country} onChange={onChange}
+              >
+                <option value="">Choose your country</option>
+                {countries.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </Field>
+            <p style={{ ...muted, margin: 0 }}>
+              <strong>We cannot post anywhere in Europe</strong> &mdash;{" "}
+              {business.international.excluded.reason}.{" "}
+              <a href="/shipping" target="_blank" rel="noreferrer noopener">
+                The full reason is here
+              </a>
+              . Everywhere else on the list is open.
+            </p>
+          </>
+        )}
+
         <PlanPicker
           pending={plansPending}
           options={plans}
@@ -877,10 +989,27 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           onChange={(m) => set("plan_months", m)}
           error={fieldErrs.plan_months}
         />
+        {plansMissing && (
+          <Notice>
+            This month&rsquo;s prices could not be loaded. Please refresh the page in a moment —
+            everything you have typed is kept.
+          </Notice>
+        )}
         <button
           className="btn btn-primary"
           type="button"
-          onClick={() => goTo(2)}
+          onClick={() => {
+            /* "Somewhere else" with no country chosen is not an answer, and
+             * letting it through would price the plan in dollars for a
+             * destination nobody has named. */
+            if (abroad && !values.country) {
+              setFieldErrs({ country: "Choose the country it is going to." });
+              setFormError("Which country is it going to?");
+              return;
+            }
+            goTo(2);
+          }}
+          disabled={!plans.length}
           style={css("align-self:flex-start;padding:13px 24px;font-size:15px;margin-top:6px")}
         >
           Next: who it&rsquo;s for
@@ -1021,32 +1150,61 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 autoComplete="address-level2" value={values.city} onChange={onChange} placeholder="Town or city"
               />
             </Field>
-            <Field id="ldp-pin" label="PIN code" error={fieldErrs.pincode}>
-              <input
-                className="input" id="ldp-pin" name="pincode" type="text" required inputMode="numeric"
-                pattern="[1-9][0-9]{5}" maxLength={6} autoComplete="postal-code" value={values.pincode}
-                onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="6 digits"
-              />
-            </Field>
+            {abroad ? (
+              <Field
+                id="ldp-postcode" label="Postal / ZIP code" optional
+                error={fieldErrs.pincode}
+                hint="However your post office writes it."
+              >
+                <input
+                  className="input" id="ldp-postcode" name="pincode" type="text"
+                  autoComplete="postal-code" value={values.pincode} onChange={onChange}
+                  placeholder="97205"
+                />
+              </Field>
+            ) : (
+              <Field id="ldp-pin" label="PIN code" error={fieldErrs.pincode}>
+                <input
+                  className="input" id="ldp-pin" name="pincode" type="text" required inputMode="numeric"
+                  pattern="[1-9][0-9]{5}" maxLength={6} autoComplete="postal-code" value={values.pincode}
+                  onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="6 digits"
+                />
+              </Field>
+            )}
           </div>
 
-          <Field id="ldp-state" label="State" error={fieldErrs.state}>
-            <select
-              className="input" id="ldp-state" name="state" required autoComplete="address-level1"
-              value={values.state} onChange={onChange}
+          {/* A dropdown of Indian states is no use in Oregon, and a required
+            * "state" is meaningless in Singapore — so abroad it is one
+            * optional line for whatever that address actually has. */}
+          {abroad ? (
+            <Field
+              id="ldp-region" label="State, province or region" optional error={fieldErrs.state}
             >
-              <option value="">Choose a state</option>
-              {STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </Field>
+              <input
+                className="input" id="ldp-region" name="state" type="text"
+                autoComplete="address-level1" value={values.state} onChange={onChange}
+                placeholder="Oregon"
+              />
+            </Field>
+          ) : (
+            <Field id="ldp-state" label="State" error={fieldErrs.state}>
+              <select
+                className="input" id="ldp-state" name="state" required autoComplete="address-level1"
+                value={values.state} onChange={onChange}
+              >
+                <option value="">Choose a state</option>
+                {STATES.map((st) => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </Field>
+          )}
 
           <p style={{ ...muted, margin: 0 }}>
-            Delivery within India takes up to a week. We post within India only for the moment
-            &mdash; global shipping is being worked out, and if you are somewhere else you can{" "}
-            <a href="#global">ask to be told when it opens</a>.
+            {abroad
+              ? "Abroad it usually takes two to six weeks, and longer if customs hold it. Import charges, if your country adds any, are paid by you."
+              : "Delivery within India takes up to a week."}
           </p>
 
           {/* Not behind a toggle. These three are the ones that make the next

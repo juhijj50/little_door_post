@@ -230,7 +230,8 @@ export default function Privacy() {
         </li>
         <li>
           <strong>Correct or complete it.</strong> If you have moved, tell us before the{" "}
-          {business.window.closesDay} and that month&rsquo;s envelope goes to the new address.
+          {business.cancelBy} of the edition&rsquo;s month and that edition&rsquo;s envelope goes to
+          the new address.
         </li>
         <li>
           <strong>Have it erased</strong>, unless we are required by law to keep it — see the

@@ -35,21 +35,15 @@ the API's origin — copy `.env.example` to `.env`.
 | `public/assets/` | the illustrations |
 | `vercel.json` | the SPA rewrite, so `/terms` works when typed directly |
 
-## Posting abroad — the waiting list
+## Posting abroad — and the waiting list
 
-Not open. The export process is still being set up, the `international` rows in
-the `plans` table are inactive, and `create_subscription` refuses a foreign
-address. `src/GlobalWaitlist.jsx` is what stands in for it: a section that sells
-nothing, takes no address, and records two things — an Instagram handle to
-write back to and a country to count.
-
-The country is the useful half. Opening a route is decided per country, so
-`GET /api/admin/international-interest` groups the list by country to say which
-one is worth the paperwork first.
+Open: one letter for $13 to every country in `backend/app/countries.py`, which
+is everywhere outside Europe. `src/GlobalWaitlist.jsx` takes the rest: a
+section that sells nothing, takes no address, and records an Instagram handle
+to write back to and a country to count, in the `international_interest` table.
 
 Everything the section states comes from `business.international`:
-`indicativeUsdPerLetter` (12, and labelled an estimate on the page because
-nothing can be sold at it yet), `setupDays` (10), and `excluded` — which the
+`indicativeUsdPerLetter` (13), `setupDays` (10), and `excluded` — which the
 form mentions up front, so nobody in Dublin joins a list we have decided not to
 serve.
 

@@ -1,28 +1,29 @@
 import React from "react";
 import LegalPage, { Note } from "./LegalPage.jsx";
 import { business } from "../business.js";
+import { useRateCard } from "../useConfig.js";
 
 export default function Refunds() {
-  const { window: win, international: intl } = business;
+  const { cancelBy, international: intl } = business;
+  const card = useRateCard();
 
-  /* The worked example below is derived, not typed. A hardcoded total survives
-   * a price change looking perfectly plausible, which is the worst way for a
-   * refund policy to be wrong.
+  /* The worked example below is derived from the live rate card, not typed. A
+   * hardcoded total survives a price change looking perfectly plausible, which
+   * is the worst way for a refund policy to be wrong.
    *
-   * It needs a plan long enough to have months left after two have gone out.
-   * While only the single month is on sale there is no such plan, and an
-   * example about cancelling a one-month subscription part way through would
-   * be nonsense — so the paragraph steps aside until a longer plan returns. */
-  const longest = business.plans[business.plans.length - 1];
-  const canWorkExample = longest.months > 2;
-  const rateNumber = Number(longest.rate.replace(/[^0-9.]/g, ""));
-  const refundExample = `₹${((longest.months - 2) * rateNumber).toLocaleString("en-IN")}`;
+   * It needs a plan long enough to have months left after two have gone out;
+   * without one (or before the prices have loaded) the paragraph steps aside. */
+  const longest = card.india[card.india.length - 1];
+  const canWorkExample = Boolean(longest && longest.months > 2);
+  const refundExample = canWorkExample
+    ? `₹${(((longest.months - 2) * longest.rateMinor) / 100).toLocaleString("en-IN")}`
+    : "";
 
   return (
     <LegalPage
       path="/refunds"
       title="Refunds & Cancellation"
-      summary="Cancel before the 5th and get everything back. After that, the month already in the post is ours and every month still to come is yours."
+      summary="Cancel before the 1st of your edition's month and get everything back. After that, the month already in the post is ours and every month still to come is yours."
     >
       <p>
         This page is the whole policy. There is no clause further down that takes back what the top
@@ -40,8 +41,8 @@ export default function Refunds() {
         <tbody>
           <tr>
             <td>
-              You cancel <strong>before the {win.closesDay}</strong>, while that month&rsquo;s
-              window is still open
+              You cancel <strong>before the {cancelBy} of your edition&rsquo;s month</strong> —
+              before 1 November for the November edition
             </td>
             <td>
               A full refund of everything you paid. Nothing has been printed or posted for you yet.
@@ -130,9 +131,9 @@ export default function Refunds() {
       </p>
       ) : (
       <p>
-        Only the single month is on sale at the moment, so there is nothing to divide: it is
-        either refunded in full before the {win.closesDay}, or posted. Longer subscriptions are
-        coming back, and this is how they will be refunded when they do.
+        For example, on a longer subscription, if you cancel after the second envelope has been
+        posted, every month still unsent is refunded at the monthly rate you paid. The two
+        envelopes already posted are not refunded.
       </p>
       )}
       <p>

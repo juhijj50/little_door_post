@@ -1,7 +1,8 @@
 import React from "react";
-import LegalPage, { Note } from "./LegalPage.jsx";
+import LegalPage, { Note, RateTable } from "./LegalPage.jsx";
 import { css } from "../css.js";
 import { business } from "../business.js";
+import { useRateCard } from "../useConfig.js";
 
 /*  The rate card, stated plainly on a page of its own.
  *
@@ -11,6 +12,10 @@ import { business } from "../business.js";
  *  ₹370 is worth it deserves the same page.
  */
 export default function Pricing() {
+  const card = useRateCard();
+  const plans = card.india;
+  const abroad = card.international[0];
+
   return (
     <LegalPage
       path="/pricing"
@@ -42,36 +47,10 @@ export default function Pricing() {
       <h2>The rate card</h2>
       <p>
         All prices are in Indian Rupees and include postage anywhere in India.
-        {business.plans.length > 1
-          ? " A longer subscription is a longer commitment at a better monthly rate, not a bundle bought at once — one envelope still arrives each month."
-          : " Only the single month is on sale at the moment while the rate card is reworked; longer subscriptions are coming back. Anyone already on one keeps it, and keeps the rate they paid."}
+        {plans.length > 1 &&
+          " A longer subscription is a longer commitment at a better monthly rate, not a bundle bought at once — one envelope still arrives each month."}
       </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Subscription</th>
-            <th>Monthly rate</th>
-            <th>Envelopes</th>
-            <th>Total charged</th>
-          </tr>
-        </thead>
-        <tbody>
-          {business.plans.map((p) => (
-            <tr key={p.months}>
-              <td>
-                <strong>
-                  {p.months} {p.months === 1 ? "month" : "months"}
-                </strong>
-              </td>
-              <td>{p.rate} a month</td>
-              <td>{p.months}</td>
-              <td>
-                <strong>{p.total}</strong>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <RateTable card={card} envelopes />
 
       <h2>What is included in that price</h2>
       <ul>
@@ -126,8 +105,10 @@ export default function Pricing() {
         </p>
       ) : (
         <p>
-          International rates are shown on the order form for your country before you pay. Two
-          things work differently from an order within India.
+          {abroad
+            ? `Outside India, one envelope costs ${abroad.total} (US dollars), international postage included. It is sold one letter at a time.`
+            : "International rates are shown on the order form for your country before you pay."}{" "}
+          Two things work differently from an order within India.
         </p>
       )}
       <ul>
@@ -163,14 +144,22 @@ export default function Pricing() {
 
       <Note>
         <p>
-          <strong>In short:</strong> {business.plans[0].total} for one envelope
-          {business.plans.length > 1 && (
+          <strong>In short:</strong>{" "}
+          {plans.length ? (
             <>
-              , down to {business.plans[business.plans.length - 1].rate} a month if you take{" "}
-              {business.plans[business.plans.length - 1].months}
+              {plans[0].total} for one envelope
+              {plans.length > 1 && (
+                <>
+                  , down to {plans[plans.length - 1].rate} a month if you take{" "}
+                  {plans[plans.length - 1].months}
+                </>
+              )}
+              .
             </>
-          )}
-          . Postage included, nothing added at checkout, and nothing charged again afterwards. See{" "}
+          ) : (
+            "the price on the order form is the whole price."
+          )}{" "}
+          Postage included, nothing added at checkout, and nothing charged again afterwards. See{" "}
           <a href="/refunds">Refunds &amp; Cancellation</a> for how to get it back.
         </p>
       </Note>

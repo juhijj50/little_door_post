@@ -98,78 +98,23 @@ export const business = {
   },
 
   /* ── the rate card ───────────────────────────────────────────────────── */
-  /*  The prices actually charged live in the `plans` table in Postgres, which
-   *  is the source of truth; these mirror it so the Terms page can state a
-   *  figure without waiting on an API call, and so the sign-up form has a rate
-   *  card to fall back on when the API is asleep. Change one, change the other
-   *  — `insert into plans` in backend/app/schema.sql.
-   *
-   *  ── ONE PLAN, ON PURPOSE (20 Sep 2026) ────────────────────────────────
-   *
-   *  Only the single month is on sale. The three- and six-month plans are
-   *  switched off — `active = false` on the india rows — while the rate card
-   *  is reworked for next month. Readers who already hold a longer
-   *  subscription keep it and keep the rate they paid; nothing about their
-   *  order changes.
-   *
-   *  The pages below cope with a one-plan card: the "better monthly rate"
-   *  line and the pro-rata worked example only appear when there is a longer
-   *  plan to talk about. Put the longer plans back and they return by
-   *  themselves.
-   *
-   *  What is coming is in `nextRateCard` further down — written out, and
-   *  deliberately not in use.
+  /*  NOT HERE. Every price on the site — the order form, the Pricing, Terms
+   *  and Refunds pages, the section for readers abroad — is read live from the
+   *  `plans` table through /api/config (see useRateCard in useConfig.js), and
+   *  changed in the admin panel's Prices tab. One source, so a page can never
+   *  state a price the checkout does not charge.
    */
-  plans: [
-    { months: 1, rate: "₹375", total: "₹375", note: "one envelope" },
-  ],
   currency: "INR",
 
-  /*  ── NEXT MONTH'S RATE CARD — NOT IN USE ───────────────────────────────
-   *
-   *  Planned from October 2026. Nothing reads this: it is here so the figures
-   *  live beside the ones they replace rather than in a note somewhere.
-   *
-   *  The full changeover — including the four places that reject a 12-month
-   *  plan today, and the two readers who move onto the founding rate — is
-   *  written out step by step in backend/NEXT-MONTH-RATE-CHANGE.md. Follow
-   *  that; this is only the figures.
-   *
-   *  Totals, not monthly rates — the monthly rate is the total divided by the
-   *  months, which is what the plans table stores.
-   */
-  nextRateCard: [
-    { months: 1, total: "₹499", perMonth: "₹499" },
-    { months: 3, total: "₹1,380", perMonth: "₹460" },
-    { months: 6, total: "₹2,640", perMonth: "₹440" },
-    { months: 12, total: "₹5,040", perMonth: "₹420" },
-  ],
-
-  /*  What a founding member pays from next month, whatever length they take.
-   *  It matches the twelve-month rate above, so a founding member always pays
-   *  the best price on the card.
-   *
-   *  NOT APPLIED YET, and it must not be until the rate card above is: today
-   *  the standard rate is ₹375, so ₹420 would charge a founding member more
-   *  than a stranger pays. It is ₹315 in the database until then.
-   *
-   *  The two readers on six-month subscriptions are to get this same rate.
-   *  They are not founding members today; add them to `founding_members` when
-   *  the rate changes, keyed on their phone number, and it applies to what
-   *  they take next. It does not touch the six months they have already paid
-   *  for.
-   *
-   *  Who they are is not written here on purpose — this repository is public.
-   *  They are the only two on a six-month plan, so the admin subscription list
-   *  identifies them. The full changeover is in the planning note kept beside
-   *  the backend, which is git-ignored for the same reason.
-   */
-  foundingNextRate: "₹420",
-
   /* ── the timetable ───────────────────────────────────────────────────── */
-  /* The same 15th-to-5th window the backend enforces in app/cycles.py. */
-  window: { opensDay: "15th", closesDay: "5th" },
-  dispatchWindow: "within 10 days of the 5th",
+  /*  Editions are named for their month — the November edition — and which
+   *  one is on sale is set by hand in the admin panel, not by dates.
+   *
+   *  The one date that matters to a reader: cancel before the 1st of the
+   *  edition's month (before 1 November, for November) and everything is
+   *  refunded. The same day is the cut-off for a change of address. */
+  cancelBy: "1st",
+  dispatchWindow: "from the 1st of the edition's month",
   deliveryEstimate: "up to a week from dispatch",
   shipsTo: "India only",
 
@@ -197,26 +142,20 @@ export const business = {
    *  site that the order form refuses to honour.
    */
   international: {
-    live: false,
+    /* Open since 29 Sep 2026: $13 for one letter (from Oct 2026), postage
+     * included, to the countries in app/countries.py — everywhere but Europe.
+     * One letter at a time abroad, no longer plans. Razorpay raises USD orders
+     * on this account, so the charge is in dollars rather than a rupee figure a
+     * foreign card has to guess at. */
+    live: true,
 
     /* Who pays the destination country's import charges. "recipient" is the
      * norm for postal goods (DDU) and is what we can actually operate: we
      * cannot pre-pay duty in 190 countries from Gandhinagar. */
     dutiesBorneBy: "recipient",
 
-    /*  What a letter abroad is expected to cost, in US dollars.
-     *
-     *  INDICATIVE, and said so wherever it is shown. The export process is
-     *  still being set up and nothing can be sold at this figure yet — the
-     *  `international` rows in the plans table are still inactive. It is
-     *  published so that nobody joins the waiting list imagining the India
-     *  price and then meets this one.
-     *
-     *  Mirrors INTERNATIONAL_INDICATIVE_USD in
-     *  backend/app/routers/subscriptions.py, which serves it on /api/config.
-     *  Change one, change the other. When the real rates are set, they go in
-     *  the plans table and this can go. */
-    indicativeUsdPerLetter: 12,
+    /* The price abroad is not here either — it is the `international` row in
+     * the plans table, read live like every other price. */
 
     /*  Roughly how long the export paperwork is expected to take, told to
      *  people on the waiting list. Deliberately hedged on the page — it is a
@@ -269,8 +208,20 @@ export const business = {
      *  Germany puts us in exactly the position this avoids. The country list
      *  in step (2) above is the part that actually does the work. */
     excluded: {
-      regions: ["the European Union", "the European Economic Area", "the United Kingdom"],
-      short: "the EU, the EEA and the UK",
+      regions: ["Europe"],
+      short: "Europe",
+      /* Two rules stack up there, and either alone would be enough: the
+       * fourteen-day right to withdraw and be refunded in full (which follows
+       * the buyer, so it binds us here), and the duty the EU began charging on
+       * low-value imports in July 2026.
+       *
+       * The line is drawn at the continent rather than at "the EU, the EEA and
+       * the UK" on purpose — those borders are not obvious to somebody picking
+       * from a dropdown, and a rule a reader can predict is worth more than a
+       * few extra countries. The full list is app/countries.py. */
+      reason:
+        "the tax and consumer-protection rules there are more than a two-person " +
+        "workshop in India can take on",
     },
 
     /* Real examples, kept current, because "rules may change" is abstract and
@@ -296,7 +247,7 @@ export const business = {
   resolveDays: 30,
 
   /* ── housekeeping ────────────────────────────────────────────────────── */
-  lastUpdated: "12 September 2026",
+  lastUpdated: "4 October 2026",
   jurisdiction: "Gandhinagar, Gujarat",
   paymentProcessor: "Razorpay Software Private Limited",
 };

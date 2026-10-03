@@ -1,72 +1,62 @@
 /*  The landing page.
  *
- *  Six sections, in the order a reader meets them:
+ *  Iris walks through doors, and every door opens onto a real corner of the
+ *  world — one that is there today, or one that was there once. Each month's
+ *  envelope is about one of them.
  *
- *    hero      →  the wordmark over the forest, and what arrives
+ *  Five sections, in the order a reader meets them:
+ *
+ *    hero      →  the wordmark over the forest, the edition on sale, what arrives
  *    meet      →  who Iris is, and a way into her first letter
- *    inside    →  the nine printed pieces, named
- *    gallery   →  ten photographs of real post going out
- *    folk      →  who wrote this month's second letter
+ *    inside    →  this edition's envelope, piece by piece
+ *    gallery   →  photographs of real post going out
  *    subscribe →  SubscribeForm, which owns the whole sign-up
  *
- *  Styling is inline through css() for the same reason as the rest of the app:
- *  the tokens live in styles.css / brand-tokens.css, and everything here reads
- *  from them rather than restating colours.
+ *  The edition, the envelope's contents and photograph, and the gallery all
+ *  come from /api/config and are edited from the admin panel. The lists below
+ *  are only what shows if the API cannot be reached at all.
+ *
+ *  Styling is inline through css() as before; the parts that need media
+ *  queries (the header menu, the envelope grid, the gallery) are in site.css.
  */
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { css } from "./css.js";
+import { mediaUrl } from "./api.js";
+import useConfig from "./useConfig.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import GlobalWaitlist from "./GlobalWaitlist.jsx";
+import Gallery from "./Gallery.jsx";
 
-/* Kept in step with `contents` in business.js and ENVELOPE_CONTENTS in
- * backend/app/routers/subscriptions.py. Nine, not eight: the passport is sent
- * once, with a first envelope, and is listed because a reader who is paying
- * for it should be able to read what it is. */
-const ENVELOPE = [
-  ["A letter from Iris", "Two printed pages about the place she has wandered into this month."],
-  ["A letter from a side character", "One printed page from somebody she met there, in their own words."],
-  ["A theme sticker", "A die-cut sticker of that month's world."],
-  ["A character sticker", "A die-cut sticker of Iris, or one of the folk she meets."],
-  ["An art print", "A small illustrated print on card, drawn for that month's story."],
-  ["An activity sheet", "One page — a puzzle, a recipe, or something to make."],
+/* Mirrors DEFAULT_CONTENTS in backend/app/cycles.py. Only shown when the API
+ * is unreachable; otherwise the edition's own list, from the panel, is used. */
+const ENVELOPE_FALLBACK = [
+  ["A letter from Iris", "Two printed pages from the corner of the world she has wandered into this month."],
+  ["A letter from someone she met", "One printed page from a person who lives there — or lived there, long ago."],
+  ["A place sticker", "A die-cut sticker of that month's corner of the world."],
+  ["A character sticker", "A die-cut sticker of Iris, or of somebody she met on the way."],
+  ["An art print", "A small illustrated print on card, drawn from that month's place."],
+  ["An activity sheet", "One page — a puzzle, a recipe from that place, or something to make."],
   ["A special poem", "Written for that month by a friend of Iris, and printed to keep."],
-  ["A stamp of the town", "A paper stamp of that month's place, to paste into your passport."],
-  ["A Wanderland Passport", "For first-time subscribers. A stapled booklet with a page for every door, and a stamp to paste in each time a letter lands."],
-];
+  ["A stamp of the place", "A printed paper stamp of that month's corner of the world, for your passport."],
+  ["A Wanderland Passport", "For first-time subscribers. A booklet with a page for every door, and a stamp to paste in each time a letter lands."],
+].map(([title, detail]) => ({ title, detail }));
 
-/* Photographs of post that has actually gone out. Two rows of five on a wide
- * screen, two columns on a phone — the grid below does that without a media
- * query, and every tile is the same 3:4 so no row goes ragged. */
-const GALLERY = [
+/* The photographs the gallery started with, shipped with the site. Shown only
+ * if the API cannot be reached — the live gallery is whatever the panel holds. */
+const GALLERY_FALLBACK = [
   ["/assets/gallery-white-stack.webp", "A stack of white envelopes printed with the blue door and the Little Door Post wordmark"],
   ["/assets/gallery-green-seals.webp", "Sage-green envelopes with painted door cards and pressed wax seals"],
   ["/assets/gallery-addressed.webp", "Green and white envelopes addressed by hand, stamped with strawberries and little doors"],
-  ["/assets/gallery-sunlit-nook.webp", "The Sunlit Nook edition laid out: letters, a recipe, a to-do list and mushroom and flower stickers"],
-  ["/assets/gallery-lanterns.webp", "The Land of Lanterns letters, bordered with pumpkins, ghosts and black cats"],
-  ["/assets/gallery-mayor-prints.webp", "Art prints of the Mayor in his lantern-lit street, fanned out in a stack"],
-  ["/assets/gallery-red-race.webp", "The Red Race envelope opened out: the letter, sticker sheets, wax seals, a colouring page and thank-you notes"],
-  ["/assets/gallery-butterfly-seal.webp", "A white envelope closed with a butterfly wax seal, held over a pot of yellow chrysanthemums"],
-  ["/assets/gallery-packing.webp", "Coloured paper envelopes, handwritten notes, sunflower stickers and sticker books laid out for packing"],
-  ["/assets/gallery-sketchbook.webp", "A sketchbook open to a drawing of Iris in her yellow cardigan, propped up on a desk"],
-];
-
-/* This month's three. They stand together on one baseline — the heights differ
- * on purpose, they are different people — and carry nothing but their names:
- * the letter is where they get to speak. */
-const FOLK = [
-  ["/assets/mayor-folk.webp", "Mr. Drumstring, a ghost in a top hat and green coat wearing a Mayor's rosette", "33%", "clamp(168px,27vw,320px)"],
-  ["/assets/witch.webp", "Martha, a ghost in a wide hat and ribboned skirts carrying a book and a satchel", "30%", "clamp(180px,29vw,344px)"],
-  ["/assets/moondog.webp", "Mistling, a cream-and-blue hound with flowering branches for antlers and a moon charm", "31%", "clamp(150px,24vw,284px)"],
-];
-
-const FOLK_NAMES = ["Mr. Drumstring", "Martha", "Mistling"];
+  ["/assets/gallery-sunlit-nook.webp", "An edition laid out: letters, a recipe, a to-do list and stickers"],
+  ["/assets/gallery-red-race.webp", "An envelope opened out: the letter, sticker sheets, wax seals and a colouring page"],
+  ["/assets/gallery-packing.webp", "Coloured paper envelopes, handwritten notes and sticker books laid out for packing"],
+].map(([src, caption]) => ({ src, caption }));
 
 const NAV = [
   ["#meet", "Meet Iris"],
   ["#inside", "What's inside"],
-  ["#gallery", "The post, photographed"],
-  ["#folk", "Who you'll meet"],
+  ["#gallery", "Gallery"],
   ["/red-race", "Read Door 1"],
   ["#global", "Outside India"],
 ];
@@ -85,54 +75,125 @@ const h2 = css(
 const lede = css(
   "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
 );
-const tile = css(
-  "margin:0;border-radius:var(--radius-md);overflow:hidden;background:var(--color-neutral-200);box-shadow:var(--shadow-sm)"
-);
 
-export default function TheLittleDoorPost() {
+/* The header. On a phone the links fold behind a three-line button. */
+function SiteHeader() {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
+    /* Widening past the phone layout puts the links back in the bar; the
+     * menu should not still think it is open when the screen narrows again. */
+    const onResize = () => window.innerWidth > 760 && setOpen(false);
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [open]);
+
   return (
-    <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:hidden")}>
-      {/* ── header ─────────────────────────────────────────────────────── */}
-      <header
-        style={css(
-          "position:sticky;top:0;z-index:60;background:color-mix(in srgb, var(--color-bg) 92%, transparent);backdrop-filter:blur(9px);border-bottom:1px solid var(--color-neutral-300)"
-        )}
-      >
-        <div
-          style={css(
-            "width:min(1180px,100%);margin:0 auto;display:flex;align-items:center;flex-wrap:wrap;gap:8px clamp(10px,2vw,22px);padding:8px clamp(14px,4vw,40px)"
-          )}
+    <header className="site-header">
+      <div className="site-header__bar">
+        <a href="/" className="site-header__brand" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0;text-decoration:none;color:var(--color-text)")}>
+          <img
+            src="/assets/logo-round.webp"
+            alt=""
+            style={css(
+              "width:clamp(36px,8vw,44px);height:clamp(36px,8vw,44px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
+            )}
+          />
+          <span
+            style={css(
+              "font-family:var(--font-heading);font-weight:600;font-size:clamp(16px,3.6vw,20px);line-height:1.1;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+            )}
+          >
+            The Little Door Post
+          </span>
+        </a>
+        <a className="btn btn-primary site-header__cta" href="#subscribe" style={css("padding:10px 20px;font-size:14px;white-space:nowrap;order:2")}>
+          Receive a letter
+        </a>
+        <button
+          type="button"
+          className="site-header__toggle"
+          aria-expanded={open}
+          aria-controls="site-nav"
+          aria-label={open ? "Close the menu" : "Open the menu"}
+          onClick={() => setOpen((o) => !o)}
         >
-          <a href="/" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)")}>
-            <img
-              src="/assets/logo-round.webp"
-              alt=""
-              style={css(
-                "width:clamp(36px,8vw,44px);height:clamp(36px,8vw,44px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
-              )}
-            />
-            <span
-              style={css(
-                "font-family:var(--font-heading);font-weight:600;font-size:clamp(16px,3.6vw,20px);line-height:1.1;letter-spacing:.02em;white-space:nowrap"
-              )}
-            >
-              The Little Door Post
-            </span>
-          </a>
-          <a className="btn btn-primary" href="#subscribe" style={css("padding:10px 20px;font-size:14px;white-space:nowrap;order:2")}>
+          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+            {open ? (
+              <path d="M5 5l12 12M17 5 5 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            ) : (
+              <path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            )}
+          </svg>
+        </button>
+        <nav id="site-nav" className={`site-header__nav${open ? " is-open" : ""}`} aria-label="Sections">
+          {NAV.map(([href, label]) => (
+            <a key={href} href={href} onClick={() => setOpen(false)}>
+              {label}
+            </a>
+          ))}
+          <a className="site-header__nav-cta" href="#subscribe" onClick={() => setOpen(false)}>
             Receive a letter
           </a>
-          {/* Its own row, so the brand and the one action never have to compete
-            * for width on a phone. */}
-          <nav style={css("order:3;flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 18px;padding:2px 0 4px")}>
-            {NAV.map(([href, label]) => (
-              <a key={href} href={href} style={css("font-size:14px;text-decoration:none;color:var(--color-neutral-800);white-space:nowrap")}>
-                {label}
-              </a>
-            ))}
-          </nav>
-        </div>
-      </header>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+/* "Now taking orders for…" or "…sold out". Nothing at all until the API has
+ * answered, rather than a guess that might be wrong. */
+function EditionBadge({ edition }) {
+  if (!edition) return null;
+  const soldOut = edition.status === "sold_out";
+  return (
+    <div
+      style={css(
+        "position:relative;display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;margin:0 0 clamp(14px,2.4vh,22px);padding:8px 16px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;animation:ldp-rise 1s .3s both;" +
+          (soldOut
+            ? "background:#f6e3df;color:#7c2f25;border:1px solid #e6c1b9"
+            : "background:var(--color-accent-100);color:var(--color-accent-800);border:1px solid var(--color-accent-300)")
+      )}
+    >
+      <span
+        aria-hidden="true"
+        style={css(`width:7px;height:7px;border-radius:50%;background:${soldOut ? "#b5503f" : "var(--color-accent-600)"}`)}
+      />
+      {soldOut ? (
+        <span>
+          <strong>The {edition.name} edition is sold out</strong> &middot; {edition.next.name} opens soon
+        </span>
+      ) : (
+        <span>
+          Now posting the <strong>{edition.name}</strong> edition
+        </span>
+      )}
+    </div>
+  );
+}
+
+export default function TheLittleDoorPost() {
+  const { config, failed } = useConfig();
+  const edition = config?.edition;
+
+  const items = config?.envelope?.items?.length ? config.envelope.items : ENVELOPE_FALLBACK;
+  const envelopeImage = mediaUrl(config?.envelope?.image) || "/assets/envelope-white.webp";
+
+  const photos = config
+    ? (config.gallery || []).map((g) => ({ src: mediaUrl(g.url), caption: g.caption }))
+    : failed
+    ? GALLERY_FALLBACK
+    : [];
+
+  return (
+    <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:clip")}>
+      <SiteHeader />
 
       {/* ── hero ───────────────────────────────────────────────────────── */}
       <section
@@ -173,6 +234,8 @@ export default function TheLittleDoorPost() {
           )}
         />
 
+        <EditionBadge edition={edition} />
+
         <img
           src="/assets/wordmark.png"
           alt="The Little Door Post"
@@ -184,18 +247,19 @@ export default function TheLittleDoorPost() {
             "position:relative;max-width:32ch;margin:clamp(6px,1.6vh,16px) 0 0;font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,4.6vw,32px);line-height:1.34;color:var(--color-accent-800);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
-          Every month, Iris finds a new door.
+          Every month, Iris opens a new door.
           <br />
-          Every month, she sends a letter home.
+          Behind it, a real corner of the world.
         </p>
 
         <p
           style={css(
-            "position:relative;max-width:46ch;margin:clamp(14px,2.4vh,22px) 0 0;font-size:clamp(15px,2vw,17px);line-height:1.72;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
+            "position:relative;max-width:48ch;margin:clamp(14px,2.4vh,22px) 0 0;font-size:clamp(15px,2vw,17px);line-height:1.72;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
-          Eight printed pieces — letters, a poem, stickers, an art print — sealed into one envelope
-          and posted to your letterbox. Anywhere in India.
+          Some of those corners are still there today. Some were there once, long ago. Each month
+          she writes home about one of them &mdash; letters, a poem, stickers and an art print,
+          sealed into one envelope and posted to your letterbox.
         </p>
 
         <div
@@ -216,11 +280,11 @@ export default function TheLittleDoorPost() {
             "position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;margin-top:clamp(20px,3vh,28px);font-size:13px;letter-spacing:.02em;color:var(--color-neutral-600)"
           )}
         >
-          <span>Addressed by hand</span>
+          <span>Real places, past and present</span>
           <span style={css("width:5px;height:5px;border-radius:50%;background:#d98f8a")} />
           <span>Printed on real paper</span>
           <span style={css("width:5px;height:5px;border-radius:50%;background:var(--color-accent-2-400)")} />
-          <span>Within India, in about a week</span>
+          <span>Posted across India and abroad</span>
         </div>
       </section>
 
@@ -253,20 +317,21 @@ export default function TheLittleDoorPost() {
               Somewhere between worlds there is a girl with red curls and a suitcase full of paper.
             </p>
             <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
-              She travels through doors, one to the next, and writes to strangers about the towns she
-              wanders into. Some are strange. Some are soft. Some hum with music at midnight. Some
-              smell of buttered toast.
+              She travels through doors, one to the next, and every door opens somewhere real. A
+              market town that still wakes before dawn. A harbour the sea swallowed centuries ago. A
+              village with a single road in. A library that burned two thousand years back.
             </p>
             <p style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
-              Whatever she finds, she posts home: written out, printed, folded and sealed by one pair
-              of hands.
+              Some of these corners are famous. Most are not. Wherever she lands, she meets the
+              people who live there &mdash; or lived there once &mdash; and writes it all home:
+              printed, folded and sealed by one pair of hands.
             </p>
             <p
               style={css(
                 "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);color:var(--color-accent-300);text-wrap:pretty"
               )}
             >
-              She has never once run out of doors.
+              The world has never once run out of corners.
             </p>
             <a
               className="btn btn-primary"
@@ -290,39 +355,38 @@ export default function TheLittleDoorPost() {
 
       {/* ── what's inside ──────────────────────────────────────────────── */}
       <section id="inside" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
-        <div style={css("width:min(1120px,100%);margin:0 auto")}>
+        <div style={css("width:min(1180px,100%);margin:0 auto")}>
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(24px,4.5vw,56px);align-items:center")}>
             <div>
               <div style={kicker}>
                 <span style={rule} />
-                Nine pieces
+                {edition ? `The ${edition.name} envelope` : `${items.length} pieces`}
               </div>
               <h2 style={h2}>What&rsquo;s in the envelope</h2>
               <p style={{ ...lede, maxWidth: "46ch" }}>
-                The same eight pieces every month — only the writing and the artwork change — and a
-                Wanderland Passport in your very first envelope. No mystery items, nothing edible,
-                nothing you haven&rsquo;t been shown.
+                Every envelope is about one corner of the world. Here is exactly what is in this
+                one &mdash; every piece named, printed on real paper, nothing edible and nothing you
+                haven&rsquo;t been shown.
               </p>
             </div>
             <div style={css("display:flex;justify-content:center")}>
               <img
-                src="/assets/envelope-white.webp"
-                alt="A white envelope with a painted blue door, wildflowers, butterflies and a pearl wax seal"
-                style={css("width:min(470px,92%);filter:drop-shadow(0 20px 32px rgba(58,49,40,.18));animation:ldp-float 9s ease-in-out infinite alternate")}
+                key={envelopeImage}
+                src={envelopeImage}
+                alt={edition ? `The ${edition.name} envelope` : "This month's envelope"}
+                style={css(
+                  "width:min(470px,92%);max-height:420px;object-fit:contain;filter:drop-shadow(0 20px 32px rgba(58,49,40,.18));animation:ldp-float 9s ease-in-out infinite alternate"
+                )}
               />
             </div>
           </div>
 
-          <div
-            style={css(
-              "display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:clamp(12px,1.8vw,18px);margin-top:clamp(30px,5vh,54px)"
-            )}
-          >
-            {ENVELOPE.map(([title, detail], i) => (
+          <div className="envelope-grid" style={css("margin-top:clamp(30px,5vh,54px)")}>
+            {items.map(({ title, detail }, i) => (
               <div
-                key={title}
+                key={`${i}-${title}`}
                 style={css(
-                  "display:flex;flex-direction:column;gap:9px;padding:clamp(16px,2.4vw,22px);border-radius:var(--radius-md);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-sm)"
+                  "display:flex;flex-direction:column;gap:9px;padding:clamp(14px,1.8vw,20px);border-radius:var(--radius-md);background:var(--color-neutral-100);border:1px solid var(--color-neutral-300);box-shadow:var(--shadow-sm)"
                 )}
               >
                 <div style={css("display:flex;align-items:center;gap:10px")}>
@@ -341,7 +405,9 @@ export default function TheLittleDoorPost() {
                     {title}
                   </span>
                 </div>
-                <p style={css("margin:0;font-size:14px;line-height:1.62;color:var(--color-neutral-700);text-wrap:pretty")}>{detail}</p>
+                {detail && (
+                  <p style={css("margin:0;font-size:14px;line-height:1.62;color:var(--color-neutral-700);text-wrap:pretty")}>{detail}</p>
+                )}
               </div>
             ))}
           </div>
@@ -350,8 +416,8 @@ export default function TheLittleDoorPost() {
 
       {/* ── the photographs ────────────────────────────────────────────── */}
       <section id="gallery" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(16px,5vw,44px);background:var(--color-accent-100)")}>
-        <div style={css("width:min(1120px,100%);margin:0 auto")}>
-          <div style={css("max-width:48ch")}>
+        <div style={css("width:min(1180px,100%);margin:0 auto")}>
+          <div style={css("max-width:52ch;margin-bottom:clamp(18px,3vh,28px)")}>
             <div style={kicker}>
               <span style={rule} />
               Photographed at the desk
@@ -359,79 +425,10 @@ export default function TheLittleDoorPost() {
             <h2 style={h2}>The post, as it really looks</h2>
             <p style={lede}>
               Envelopes printed, sealed and addressed by hand, and the paper that goes inside them.
-              These are photographs of real post going out.
+              Tap any photograph to see it full size.
             </p>
           </div>
-
-          {/* Five across when there is room, two on a phone, and never a
-            * fractional column: the track floor is the width five would take,
-            * clamped so it cannot fall below a thumbnail people can see. */}
-          <div
-            style={css(
-              "display:grid;grid-template-columns:repeat(auto-fill,minmax(max(120px, min(45%, calc((100% - 64px) / 5))),1fr));gap:16px;margin-top:clamp(26px,4.4vh,48px)"
-            )}
-          >
-            {GALLERY.map(([src, alt]) => (
-              <figure key={src} style={tile}>
-                <img src={src} alt={alt} style={css("width:100%;aspect-ratio:3/4;object-fit:cover")} />
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── who you'll meet ────────────────────────────────────────────── */}
-      <section id="folk" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
-        <div style={css("width:min(1120px,100%);margin:0 auto")}>
-          <div style={css("max-width:50ch")}>
-            <div style={kicker}>
-              <span style={rule} />
-              This month&rsquo;s post
-            </div>
-            <h2 style={h2}>Who you&rsquo;ll meet this month</h2>
-            <p style={lede}>
-              Every envelope carries a second letter, written by somebody Iris met on the other side
-              of the door. This month it is one of these three.
-            </p>
-          </div>
-
-          <div style={css("position:relative;margin-top:clamp(26px,4.4vh,48px)")}>
-            <div style={css("display:flex;align-items:flex-end;justify-content:center;gap:clamp(2px,2.5vw,34px)")}>
-              {FOLK.map(([src, alt, width, height]) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt={alt}
-                  style={css(
-                    `width:${width};height:${height};object-fit:contain;object-position:50% 100%;filter:drop-shadow(0 16px 18px rgba(58,49,40,.16))`
-                  )}
-                />
-              ))}
-            </div>
-            {/* The ground they stand on. */}
-            <div
-              style={css(
-                "height:1px;background:linear-gradient(90deg, transparent 0%, var(--color-neutral-400) 18%, var(--color-neutral-400) 82%, transparent 100%)"
-              )}
-            />
-          </div>
-
-          <div
-            style={css(
-              "display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(2px,2.5vw,34px);margin-top:clamp(14px,2.4vh,22px);text-align:center"
-            )}
-          >
-            {FOLK_NAMES.map((name) => (
-              <h3
-                key={name}
-                style={css(
-                  "font-family:var(--font-heading);font-weight:600;font-size:clamp(18px,2.6vw,27px);line-height:1.16;margin:0;color:var(--color-accent-800);text-wrap:balance"
-                )}
-              >
-                {name}
-              </h3>
-            ))}
-          </div>
+          <Gallery photos={photos} pending={!config && !failed} />
         </div>
       </section>
 
@@ -460,8 +457,11 @@ export default function TheLittleDoorPost() {
               Receive a letter
             </h2>
             <p style={{ ...lede, maxWidth: "42ch", marginLeft: "auto", marginRight: "auto" }}>
-              Choose a subscription, tell Iris where to post it, and your address goes into this
-              month&rsquo;s batch.
+              {!edition
+                ? "Choose a subscription, tell Iris where to post it, and your address goes into this month’s batch."
+                : edition.open
+                ? `Choose a subscription, tell Iris where to post it, and your address goes into the ${edition.name} batch.`
+                : `Every copy of the ${edition.name} edition has gone. ${edition.next.name} is next.`}
             </p>
           </div>
           <SubscribeForm />

@@ -4,7 +4,7 @@ import { css } from "../css.js";
 import { business } from "../business.js";
 
 export default function Shipping() {
-  const { window: win, international: intl } = business;
+  const { cancelBy, international: intl } = business;
 
   return (
     <LegalPage
@@ -46,7 +46,8 @@ export default function Shipping() {
       <h2>The monthly rhythm</h2>
       <p>
         Envelopes go out in one batch each month rather than one at a time. That is what lets a
-        hand-addressed envelope cost what it does.
+        hand-addressed envelope cost what it does. Each batch is an <em>edition</em>, named for its
+        month — the November edition — and the order form always says which one you are buying into.
       </p>
       <table>
         <thead>
@@ -58,22 +59,25 @@ export default function Shipping() {
         <tbody>
           <tr>
             <td>
-              <strong>{win.opensDay} of the month</strong>
-            </td>
-            <td>Sign-ups open for next month&rsquo;s envelope.</td>
-          </tr>
-          <tr>
-            <td>
-              <strong>{win.closesDay} of the next month</strong>
+              <strong>While the edition is open</strong>
             </td>
             <td>
-              Sign-ups close. This is also the last moment to cancel for a full refund, or to send
-              us a change of address for that month.
+              Sign-ups are taken for it. Editions are printed in limited runs; once one sells out,
+              the site says so and the next edition opens soon after.
             </td>
           </tr>
           <tr>
             <td>
-              <strong>The 10 days after the {win.closesDay}</strong>
+              <strong>Before the {cancelBy} of the edition&rsquo;s month</strong>
+            </td>
+            <td>
+              The last moment to cancel for a full refund, or to send us a change of address for
+              that edition — before 1 November for the November edition.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong>From the {cancelBy} of the edition&rsquo;s month</strong>
             </td>
             <td>
               Everything is printed, packed, addressed by hand and handed to the post. This is your
@@ -89,9 +93,9 @@ export default function Shipping() {
         </tbody>
       </table>
       <p>
-        So an order placed in an open window is dispatched {business.dispatchWindow} and should be
-        with you {business.deliveryEstimate} after that. On a three- or six-month subscription, each
-        following envelope follows the same rhythm, one a month, until your subscription ends.
+        So an order for an edition is dispatched {business.dispatchWindow} and should be with you{" "}
+        {business.deliveryEstimate} after that. On a longer subscription, each following envelope
+        follows the same rhythm, one edition a month, until your subscription ends.
       </p>
 
       <h2>How long delivery takes</h2>
@@ -138,8 +142,8 @@ export default function Shipping() {
       <h3>Changing your address</h3>
       <p>
         Email <a href={`mailto:${business.email}`}>{business.email}</a> with your reference number.
-        A change that reaches us <strong>before the {win.closesDay}</strong> applies to that
-        month&rsquo;s envelope. After that the envelope is already addressed and in the batch, so the
+        A change that reaches us <strong>before the {cancelBy} of the edition&rsquo;s month</strong>{" "}
+        applies to that edition&rsquo;s envelope. After that the envelope is already addressed and in the batch, so the
         change applies from the following month.
       </p>
 
@@ -204,11 +208,14 @@ export default function Shipping() {
         offered on the order form and an order for one will be declined and refunded in full.
       </p>
       <p>
-        This is a deliberate choice rather than an oversight. Consumer law in those countries
-        requires a returns and refunds regime that a two-person workshop posting single envelopes
-        from Gujarat cannot operate properly at that distance — the return postage alone would cost
-        more than the envelope. We would rather decline the order honestly than take it on terms we
-        could not honour. If that changes, this page changes with it.
+        This is a deliberate choice rather than an oversight, and two rules stack up. Consumer law
+        across the EU, the EEA and the UK gives a distance buyer fourteen days to withdraw and be
+        refunded in full — including an envelope already posted — and that right follows the buyer,
+        so it would bind us here. On top of that the EU began charging duty on low-value imports in
+        July 2026, which puts a customs bill on an envelope that used to arrive free.
+        {" "}The line is drawn at the whole continent rather than at those three because their
+        borders are not obvious to somebody choosing from a list, and a rule you can predict is
+        worth more than a few extra countries. If it changes, this page changes with it.
       </p>
       <p>
         Please do not try to work around it with a forwarding address or a re-shipping service. We
@@ -380,8 +387,8 @@ export default function Shipping() {
 
       <h3>Cancelling an international order</h3>
       <p>
-        The ordinary rule applies: cancel before the {win.closesDay} for a full refund, and every
-        month not yet posted is refundable pro-rata at any time after that. See{" "}
+        The ordinary rule applies: cancel before the {cancelBy} of your edition&rsquo;s month for a
+        full refund, and every month not yet posted is refundable pro-rata at any time after that. See{" "}
         <a href="/refunds">Refunds &amp; Cancellation</a>.
       </p>
 
@@ -401,9 +408,10 @@ export default function Shipping() {
 
       <Note>
         <p>
-          <strong>In short:</strong> India only, postage included, dispatched{" "}
-          {business.dispatchWindow}, delivered {business.deliveryEstimate}. Lost or damaged post is
-          replaced free. Tell us before the {win.closesDay} if you have moved.
+          <strong>In short:</strong> {intl.live ? "India and abroad" : "India only"}, postage
+          included, dispatched {business.dispatchWindow}, delivered {business.deliveryEstimate}.
+          Lost or damaged post is replaced free. Tell us before the {cancelBy} of the
+          edition&rsquo;s month if you have moved.
         </p>
       </Note>
     </LegalPage>

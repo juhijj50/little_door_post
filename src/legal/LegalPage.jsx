@@ -76,6 +76,52 @@ export const Fact = ({ value }) =>
 
 export const Note = ({ children }) => <div className="ldp-note">{children}</div>;
 
+/** The rate card table, read live from the API — prices are never written
+ *  into these pages. `envelopes` adds a column counting them. */
+export const RateTable = ({ card, envelopes = false }) => {
+  if (card.pending) {
+    return <p><em>Fetching the current prices… (the price server can take up to a minute to wake).</em></p>;
+  }
+  if (card.failed || !card.india.length) {
+    return (
+      <p>
+        <em>
+          The current prices could not be loaded just now. Please refresh the page — the same prices
+          are always shown on the order form before you pay.
+        </em>
+      </p>
+    );
+  }
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Subscription</th>
+          <th>Monthly rate</th>
+          {envelopes && <th>Envelopes</th>}
+          <th>Total charged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {card.india.map((p) => (
+          <tr key={p.months}>
+            <td>
+              <strong>
+                {p.months} {p.months === 1 ? "month" : "months"}
+              </strong>
+            </td>
+            <td>{p.rate} a month</td>
+            {envelopes && <td>{p.months}</td>}
+            <td>
+              <strong>{p.total}</strong>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
 /** A two-column term/detail table, for "what we collect / why we collect it". */
 export const Rows = ({ items }) => (
   <table>

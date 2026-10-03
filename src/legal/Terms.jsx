@@ -1,9 +1,11 @@
 import React from "react";
-import LegalPage, { Fact, Note } from "./LegalPage.jsx";
+import LegalPage, { Fact, Note, RateTable } from "./LegalPage.jsx";
 import { business, addressLine } from "../business.js";
+import { useRateCard } from "../useConfig.js";
 
 export default function Terms() {
-  const { window: win, international: intl } = business;
+  const { cancelBy, international: intl } = business;
+  const card = useRateCard();
 
   return (
     <LegalPage
@@ -78,32 +80,12 @@ export default function Terms() {
         is on the <a href="/pricing">Pricing</a> page and is shown again on the order form before
         you pay. In summary:
       </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Subscription</th>
-            <th>Monthly rate</th>
-            <th>Total charged</th>
-          </tr>
-        </thead>
-        <tbody>
-          {business.plans.map((p) => (
-            <tr key={p.months}>
-              <td>
-                {p.months} {p.months === 1 ? "month" : "months"}
-              </td>
-              <td>{p.rate} a month</td>
-              <td>
-                <strong>{p.total}</strong>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <RateTable card={card} />
       <p>
-        {business.plans.length > 1
-          ? "A longer subscription is a longer commitment at a better monthly rate. It is not a bundle of envelopes bought at once — one envelope still arrives each month."
-          : "Only the single month is on sale at present. A subscription already taken for a longer term is unaffected: those envelopes are still owed, at the rate that was paid for them."}
+        A longer subscription is a longer commitment at a better monthly rate. It is not a bundle
+        of envelopes bought at once — one envelope still arrives each month.
+        {card.international[0] &&
+          ` Outside India, one envelope costs ${card.international[0].total} (US dollars), postage included.`}
       </p>
       <p>
         <strong>The whole amount is charged once, at the time of the order.</strong> There is no
@@ -130,10 +112,11 @@ export default function Terms() {
 
       <h2>4. Ordering and the monthly window</h2>
       <p>
-        Envelopes go out in monthly batches. Sign-ups for a given month open on the {win.opensDay}{" "}
-        of the previous month and close on the {win.closesDay}. An order placed inside a window
-        joins that month&rsquo;s batch; the dates for each month are shown on the order form and
-        explained on the <a href="/shipping">Shipping &amp; Delivery</a> page.
+        Envelopes go out in monthly batches, each named for its month — the November edition, for
+        example. The order form always says which edition you are buying into, and your
+        subscription starts with that edition. When an edition sells out we say so on the site and
+        stop taking orders for it until the next one opens. The timetable is explained on the{" "}
+        <a href="/shipping">Shipping &amp; Delivery</a> page.
       </p>
       <p>
         Your order is an offer to buy. The contract is formed when we accept it, which we do by
@@ -241,9 +224,10 @@ export default function Terms() {
       <h3>Countries we do not sell to</h3>
       <p>
         <strong>We do not sell or post to {intl.excluded.short}</strong>, and the order form does
-        not offer those destinations. We are a two-person workshop, and consumer law there requires
-        a refund regime we are not set up to operate across that distance; rather than offer terms
-        we could not honour properly, we would rather not take the order at all.
+        not offer those destinations. The tax and consumer-protection rules across Europe &mdash; a
+        fourteen-day right to a full refund that follows the buyer, and duty on low-value imports
+        &mdash; are more than a two-person workshop in India is set up to operate; rather than
+        offer terms we could not honour properly, we would rather not take the order at all.
       </p>
       <p>
         If you live there, please do not attempt to order through a forwarding address or a
@@ -261,8 +245,8 @@ export default function Terms() {
 
       <h2>7. Cancelling, and getting your money back</h2>
       <p>
-        You may cancel before that month&rsquo;s window closes on the {win.closesDay} and be
-        refunded in full. After an envelope has been posted, that month is not refundable, but any
+        You may cancel before the {cancelBy} of your edition&rsquo;s month — before 1 November for
+        the November edition — and be refunded in full. After an envelope has been posted, that month is not refundable, but any
         months not yet posted are refunded pro-rata. Anything that arrives damaged, or does not
         arrive at all, is replaced free or refunded.
       </p>
@@ -342,8 +326,8 @@ export default function Terms() {
       <Note>
         <p>
           <strong>In short:</strong> {business.piecesPerMonth} printed pieces a month, posted across
-          India, paid for once with no auto-renewal. Cancel before the {win.closesDay} for a full
-          refund; unsent months always come back pro-rata; anything damaged or lost is replaced.
+          India, paid for once with no auto-renewal. Cancel before the {cancelBy} of your
+          edition&rsquo;s month for a full refund; unsent months always come back pro-rata; anything damaged or lost is replaced.
           Write to <a href={`mailto:${business.email}`}>{business.email}</a> and a person will
           answer.
         </p>

@@ -1,0 +1,289 @@
+/*  The few parts of the landing page that need media queries — which inline
+ *  styles cannot have: the header's menu, the envelope grid, and the gallery.
+ *  Everything else on the page stays inline through css(), as before.
+ */
+
+/* ── header ─────────────────────────────────────────────────────────────── */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
+  backdrop-filter: blur(9px);
+  border-bottom: 1px solid var(--color-neutral-300);
+}
+.site-header__bar {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px clamp(10px, 2vw, 22px);
+  padding: 8px clamp(14px, 4vw, 40px);
+}
+.site-header__nav {
+  order: 3;
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 2px 0 4px;
+}
+.site-header__nav a {
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--color-neutral-800);
+  white-space: nowrap;
+}
+.site-header__nav a:hover {
+  color: var(--color-accent-700);
+}
+.site-header__toggle,
+.site-header__nav .site-header__nav-cta {
+  display: none;
+}
+
+/* A phone: the links fold away behind three lines, and the bar is one row —
+ * the name gives way (with an ellipsis) before anything wraps. */
+@media (max-width: 760px) {
+  .site-header__bar {
+    flex-wrap: wrap;
+  }
+  .site-header__brand {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .site-header__cta {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    min-height: 40px;
+  }
+  .site-header__toggle {
+    order: 3;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--color-neutral-300);
+    border-radius: 12px;
+    background: var(--color-neutral-100);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .site-header__nav {
+    order: 4;
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0 10px;
+  }
+  .site-header__nav.is-open {
+    display: flex;
+    animation: ldp-drop 0.18s ease-out both;
+  }
+  .site-header__nav a {
+    padding: 13px 4px;
+    font-size: 16px;
+    border-bottom: 1px solid var(--color-neutral-300);
+  }
+  .site-header__nav a:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* A narrow phone has no room for the button beside the name and the menu, so
+ * it moves into the menu, last and filled. The hero's own button is a thumb's
+ * reach below either way. */
+@media (max-width: 440px) {
+  .site-header__cta {
+    display: none !important;
+  }
+  .site-header__nav .site-header__nav-cta {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 999px;
+    border-bottom: 0;
+    background: var(--color-accent-600);
+    color: var(--color-neutral-100);
+    font-family: var(--font-heading);
+    font-weight: 600;
+  }
+}
+
+@keyframes ldp-drop {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── the envelope ──────────────────────────────────────────────────────── */
+
+/* Five across on a desktop at ordinary zoom — the brief, and the reason this
+ * is a fixed count rather than auto-fit. Fewer as the screen narrows. */
+.envelope-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(12px, 1.6vw, 18px);
+}
+@media (max-width: 1080px) {
+  .envelope-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .envelope-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 340px) {
+  .envelope-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── the gallery ───────────────────────────────────────────────────────── */
+
+.gallery {
+  position: relative;
+}
+/* A row that scrolls sideways and snaps to each photo: five in view on a
+ * desktop, fewer on smaller screens. The arrows move it a screenful at a time;
+ * a finger or a trackpad moves it as freely as any scrolling row. */
+.gallery__track {
+  --per-view: 5;
+  --gap: 16px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+  gap: var(--gap);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  padding: 4px 2px 8px;
+}
+.gallery__track::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 1080px) {
+  .gallery__track { --per-view: 4; }
+}
+@media (max-width: 760px) {
+  .gallery__track { --per-view: 2.3; --gap: 12px; }
+}
+@media (max-width: 420px) {
+  .gallery__track { --per-view: 1.6; }
+}
+.gallery__tile {
+  scroll-snap-align: start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-neutral-200);
+  box-shadow: var(--shadow-sm);
+  cursor: zoom-in;
+  aspect-ratio: 3 / 4;
+}
+.gallery__tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+.gallery__tile:hover img {
+  transform: scale(1.04);
+}
+.gallery__arrows {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.round-arrow {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-neutral-400);
+  background: var(--color-neutral-100);
+  color: var(--color-accent-800);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.round-arrow:hover:not(:disabled) {
+  background: var(--color-accent-100);
+  border-color: var(--color-accent-500);
+}
+.round-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── one photo, full screen ────────────────────────────────────────────── */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: clamp(10px, 3vw, 28px);
+  background: rgba(28, 24, 18, 0.96);
+  animation: ldp-fade 0.2s both;
+}
+.lightbox__close {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+.lightbox__figure {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+}
+.lightbox__figure img {
+  max-width: 100%;
+  max-height: calc(100% - 48px);
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+}
+.lightbox__figure figcaption {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #efe8d8;
+  text-align: center;
+  max-width: 60ch;
+}
+.lightbox__prev { grid-column: 1; grid-row: 2; }
+.lightbox__next { grid-column: 3; grid-row: 2; }
+.lightbox__count {
+  grid-column: 2;
+  grid-row: 3;
+  justify-self: center;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: #cfc6b2;
+}
+@media (max-width: 600px) {
+  /* Arrows under the photo on a phone, where the sides have no room. */
+  .lightbox {
+    grid-template-columns: 1fr auto 1fr;
+  }
+  .lightbox__figure { grid-column: 1 / -1; }
+  .lightbox__prev { grid-row: 3; grid-column: 1; justify-self: start; }
+  .lightbox__next { grid-row: 3; grid-column: 3; justify-self: end; }
+  .lightbox__count { grid-column: 2; }
+}

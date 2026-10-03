@@ -15,7 +15,11 @@
  */
 const ORIGIN = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
-const BASE = `${ORIGIN}/api`;
+export const BASE = `${ORIGIN}/api`;
+
+/* Photographs are served by the API, which hands back a path like
+ * /api/media/<id>. Put the API's own origin in front of it. */
+export const mediaUrl = (path) => (path ? `${ORIGIN}${path}` : null);
 
 export class ApiError extends Error {
   constructor(message, { status = 0, fields = {}, payload = null } = {}) {
