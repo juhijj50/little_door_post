@@ -107,6 +107,8 @@ export const getOverview = () => call("/admin/overview");
 export const setEdition = (cycle, status) =>
   call("/admin/edition", { method: "PUT", json: { cycle, status } });
 
+export const undoCount = (cycle) => call(`/admin/editions/${cycle}/undo`, { method: "POST" });
+
 export const saveContents = (cycle, items, envelope_media_id) =>
   call(`/admin/editions/${cycle}`, { method: "PUT", json: { items, envelope_media_id } });
 

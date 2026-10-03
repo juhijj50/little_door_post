@@ -58,7 +58,6 @@ const NAV = [
   ["#inside", "What's inside"],
   ["#gallery", "Gallery"],
   ["/red-race", "Read Door 1"],
-  ["#global", "Outside India"],
 ];
 
 /* The ragged lower edge of the hero photograph, cut out of the page colour. */
@@ -85,7 +84,7 @@ function SiteHeader() {
     const onKey = (e) => e.key === "Escape" && setOpen(false);
     /* Widening past the phone layout puts the links back in the bar; the
      * menu should not still think it is open when the screen narrows again. */
-    const onResize = () => window.innerWidth > 760 && setOpen(false);
+    const onResize = () => window.innerWidth > 900 && setOpen(false);
     document.addEventListener("keydown", onKey);
     window.addEventListener("resize", onResize);
     return () => {
@@ -102,7 +101,7 @@ function SiteHeader() {
             src="/assets/logo-round.webp"
             alt=""
             style={css(
-              "width:clamp(36px,8vw,44px);height:clamp(36px,8vw,44px);border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
+              "width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
             )}
           />
           <span
@@ -113,7 +112,7 @@ function SiteHeader() {
             The Little Door Post
           </span>
         </a>
-        <a className="btn btn-primary site-header__cta" href="#subscribe" style={css("padding:10px 20px;font-size:14px;white-space:nowrap;order:2")}>
+        <a className="btn btn-primary site-header__cta" href="#subscribe" style={css("padding:9px 20px;font-size:14px;white-space:nowrap;min-height:42px")}>
           Receive a letter
         </a>
         <button
@@ -155,7 +154,7 @@ function EditionBadge({ edition }) {
   return (
     <div
       style={css(
-        "position:relative;display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;margin:0 0 clamp(14px,2.4vh,22px);padding:8px 16px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;animation:ldp-rise 1s .3s both;" +
+        "position:relative;display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 10px;padding:7px 16px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;animation:ldp-rise 1s .3s both;" +
           (soldOut
             ? "background:#f6e3df;color:#7c2f25;border:1px solid #e6c1b9"
             : "background:var(--color-accent-100);color:var(--color-accent-800);border:1px solid var(--color-accent-300)")
@@ -196,19 +195,12 @@ export default function TheLittleDoorPost() {
       <SiteHeader />
 
       {/* ── hero ───────────────────────────────────────────────────────── */}
-      <section
-        id="top"
-        style={css(
-          "position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 clamp(20px,5vw,40px) clamp(52px,9vh,92px);overflow:hidden"
-        )}
-      >
-        <div style={css("align-self:stretch;position:relative;margin:0 calc(-1 * clamp(20px,5vw,40px)) clamp(22px,4vh,44px);line-height:0")}>
+      <section id="top" className="hero">
+        <div className="hero__art">
           <img
             src="/assets/forest.webp"
             alt="A watercolour clearing of mushroom folk, pinecone people and paper ghosts"
-            style={css(
-              "width:100%;height:clamp(190px,34svh,400px);object-fit:cover;object-position:50% 62%;animation:ldp-fade 1.4s both"
-            )}
+            style={css("animation:ldp-fade 1.4s both")}
           />
           <div
             style={{
@@ -234,17 +226,23 @@ export default function TheLittleDoorPost() {
           )}
         />
 
-        <EditionBadge edition={edition} />
+        {/* The badge's height is held while the API answers, so nothing below
+          * it jumps when it appears. */}
+        <div className="hero__badge" style={css("min-height:36px;display:flex;align-items:center")}>
+          <EditionBadge edition={edition} />
+        </div>
 
         <img
+          className="hero__wordmark"
           src="/assets/wordmark.png"
           alt="The Little Door Post"
-          style={css("position:relative;width:min(580px,86vw);mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
+          style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
         />
 
         <p
+          className="hero__tagline"
           style={css(
-            "position:relative;max-width:32ch;margin:clamp(6px,1.6vh,16px) 0 0;font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,4.6vw,32px);line-height:1.34;color:var(--color-accent-800);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
+            "position:relative;font-family:var(--font-heading);font-style:italic;font-weight:400;line-height:1.34;color:var(--color-accent-800);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
           Every month, Iris opens a new door.
@@ -253,8 +251,9 @@ export default function TheLittleDoorPost() {
         </p>
 
         <p
+          className="hero__lede"
           style={css(
-            "position:relative;max-width:48ch;margin:clamp(14px,2.4vh,22px) 0 0;font-size:clamp(15px,2vw,17px);line-height:1.72;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
+            "position:relative;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
           Some of those corners are still there today. Some were there once, long ago. Each month
@@ -263,8 +262,9 @@ export default function TheLittleDoorPost() {
         </p>
 
         <div
+          className="hero__actions"
           style={css(
-            "position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:clamp(20px,3.4vh,32px);animation:ldp-rise 1.1s .75s cubic-bezier(.2,.7,.2,1) both"
+            "position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;animation:ldp-rise 1.1s .75s cubic-bezier(.2,.7,.2,1) both"
           )}
         >
           <a className="btn btn-primary" href="#subscribe" style={css("padding:13px 26px;font-size:15px")}>
@@ -276,8 +276,9 @@ export default function TheLittleDoorPost() {
         </div>
 
         <div
+          className="hero__facts"
           style={css(
-            "position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;margin-top:clamp(20px,3vh,28px);font-size:13px;letter-spacing:.02em;color:var(--color-neutral-600)"
+            "position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;font-size:13px;letter-spacing:.02em;color:var(--color-neutral-600)"
           )}
         >
           <span>Real places, past and present</span>

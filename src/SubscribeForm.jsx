@@ -319,11 +319,23 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
 
   if (!options?.length) return null;
 
+  /* What a longer plan would cost at the one-month price, so the saving is
+   * shown rather than left for the reader to work out: ₹549 × 3 = ₹1,647,
+   * struck through, beside the ₹1,500 actually charged. Worked out from the
+   * live prices, so it is right whatever the panel sets. */
+  const single = options.find((p) => p.months === 1);
+  const money = (minor, currency) =>
+    `${currency === "INR" ? "₹" : "$"}${(minor / 100).toLocaleString("en-IN", {
+      maximumFractionDigits: minor % 100 ? 2 : 0,
+    })}`;
+
   return (
     <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")}>
       {options.map((plan) => {
         const on = plan.months === value;
         const months = `${plan.months} ${plan.months === 1 ? "month" : "months"}`;
+        const full = single && plan.months > 1 ? single.rateMinor * plan.months : null;
+        const saving = full && full > plan.totalMinor ? full - plan.totalMinor : 0;
         return (
           <label
             key={plan.months}
@@ -352,11 +364,36 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
               </span>
               <span
                 style={css(
-                  "margin-left:auto;font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800);white-space:nowrap"
+                  "margin-left:auto;display:inline-flex;align-items:baseline;gap:8px;white-space:nowrap"
                 )}
               >
-                {plan.totalDisplay}
+                {saving > 0 && (
+                  <s
+                    aria-label={`was ${money(full, plan.currency)}`}
+                    style={css("font-size:14px;color:var(--color-neutral-500);text-decoration-thickness:1px")}
+                  >
+                    {money(full, plan.currency)}
+                  </s>
+                )}
+                <span style={css("font-family:var(--font-heading);font-weight:600;font-size:19px;color:var(--color-accent-800)")}>
+                  {plan.totalDisplay}
+                </span>
               </span>
+              {saving > 0 && (
+                <span
+                  style={css(
+                    "flex-basis:100%;display:flex;justify-content:flex-end;font-size:12px;line-height:1.4"
+                  )}
+                >
+                  <span
+                    style={css(
+                      "padding:2px 10px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800)"
+                    )}
+                  >
+                    You save {money(saving, plan.currency)} &middot; {Math.round((saving / full) * 100)}% off
+                  </span>
+                </span>
+              )}
             </span>
           </label>
         );

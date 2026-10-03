@@ -29,6 +29,7 @@ import {
   setSubscriptionStatus,
   signIn,
   signOut,
+  undoCount,
   uploadImage,
   whenSignedOut,
 } from "./adminApi.js";
@@ -129,7 +130,7 @@ function EditionTab({ data, reload }) {
       `Put ${monthName(cycle)} on sale?\n\n` +
       `This counts the ${edition.name} envelopes against every reader: one-month readers ` +
       `finish, longer plans go down by one. The ${edition.name} posting list stays ` +
-      `available to download.`
+      `available to download.\n\nDone it by mistake? "Undo" in the table below takes it back.`
     )) return;
     if (cycle < edition.cycle && !window.confirm(
       `${monthName(cycle)} is earlier than ${edition.name}. Go back to it anyway?`
@@ -139,6 +140,19 @@ function EditionTab({ data, reload }) {
       return `${monthName(cycle)} is now ${STATUS_LABEL[status].toLowerCase()}.` +
         (forward ? ` ${counted} reader${counted === 1 ? "" : "s"} counted for ${edition.name}.` : "");
     });
+    if (done) reload();
+  };
+
+  /* A mistaken "Open next month", taken back. */
+  const undo = async (e) => {
+    if (!window.confirm(
+      `Undo counting ${e.name}?\n\n` +
+      `${e.posted_to} reader${e.posted_to === 1 ? "" : "s"} get the ${e.name} envelope back, ` +
+      `and ${e.name} goes back on the site as it was (${STATUS_LABEL[e.status].toLowerCase()}), ` +
+      `replacing ${edition.name}.\n\nUse this only if you moved on by mistake.`
+    )) return;
+    const done = await run(() => undoCount(e.cycle), (r) =>
+      `${e.name} is back on the site. ${r.given_back} reader${r.given_back === 1 ? "" : "s"} given the envelope back.`);
     if (done) reload();
   };
 
@@ -216,7 +230,7 @@ function EditionTab({ data, reload }) {
         <div className="adm-table-wrap">
           <table className="adm-table">
             <thead>
-              <tr><th>Edition</th><th>Status</th><th>Paid sign-ups</th><th>Taken</th><th /></tr>
+              <tr><th>Edition</th><th>Status</th><th>Paid sign-ups</th><th>Envelopes posted</th><th>Taken</th><th /></tr>
             </thead>
             <tbody>
               {editions.map((e) => (
@@ -224,8 +238,15 @@ function EditionTab({ data, reload }) {
                   <td><strong>{e.name}</strong>{e.is_current && <span className="adm-pill adm-pill--muted" style={{ marginLeft: 8 }}>on the site</span>}</td>
                   <td>{e.is_current ? <Pill status={e.status} /> : <span className="adm-help" style={{ margin: 0 }}>{e.counted ? "Posted" : "—"}</span>}</td>
                   <td>{e.signups}</td>
+                  <td>{e.posted_to || "—"}</td>
                   <td>{e.revenue.join(" + ") || "—"}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {e.can_undo && (
+                      <button className="adm-btn adm-btn--small adm-btn--danger" disabled={busy} onClick={() => undo(e)}
+                        style={{ marginRight: 6 }} title={`Undo moving on from ${e.name}`}>
+                        Undo
+                      </button>
+                    )}
                     <button className="adm-btn adm-btn--small" onClick={() => exporting.run(() => downloadExport(e.cycle), "Downloaded.")}>
                       Excel
                     </button>

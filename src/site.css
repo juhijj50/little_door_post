@@ -13,25 +13,30 @@
   backdrop-filter: blur(9px);
   border-bottom: 1px solid var(--color-neutral-300);
 }
+/* One row on a desktop — name on the left, the links and the button on the
+ * right — so the header costs ~60px of the screen, not two rows of it. Its
+ * height is a variable because the hero sizes itself to what is left. */
+:root {
+  --header-h: 60px;
+}
 .site-header__bar {
   width: min(1180px, 100%);
+  min-height: var(--header-h);
   margin: 0 auto;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px clamp(10px, 2vw, 22px);
-  padding: 8px clamp(14px, 4vw, 40px);
+  gap: 8px clamp(14px, 2vw, 28px);
+  padding: 6px clamp(14px, 4vw, 40px);
 }
 .site-header__nav {
-  order: 3;
-  flex-basis: 100%;
+  order: 2;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  padding: 2px 0 4px;
+  align-items: center;
+  gap: clamp(14px, 1.8vw, 26px);
 }
 .site-header__nav a {
-  font-size: 14px;
+  font-size: 15px;
   text-decoration: none;
   color: var(--color-neutral-800);
   white-space: nowrap;
@@ -39,14 +44,18 @@
 .site-header__nav a:hover {
   color: var(--color-accent-700);
 }
+.site-header__cta {
+  order: 3;
+}
 .site-header__toggle,
 .site-header__nav .site-header__nav-cta {
   display: none;
 }
 
-/* A phone: the links fold away behind three lines, and the bar is one row —
- * the name gives way (with an ellipsis) before anything wraps. */
-@media (max-width: 760px) {
+/* A phone or a narrow window: the links fold away behind three lines, and the
+ * bar is one row — the name gives way (with an ellipsis) before anything
+ * wraps. */
+@media (max-width: 900px) {
   .site-header__bar {
     flex-wrap: wrap;
   }
@@ -74,8 +83,10 @@
   }
   .site-header__nav {
     order: 4;
+    flex-basis: 100%;
     display: none;
     flex-direction: column;
+    align-items: stretch;
     gap: 0;
     padding: 4px 0 10px;
   }
@@ -117,6 +128,68 @@
 @keyframes ldp-drop {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: none; }
+}
+
+/* ── the hero ──────────────────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 clamp(20px, 5vw, 40px) clamp(52px, 9vh, 92px);
+  overflow: hidden;
+}
+.hero__art {
+  align-self: stretch;
+  position: relative;
+  margin: 0 calc(-1 * clamp(20px, 5vw, 40px)) clamp(22px, 4vh, 44px);
+  line-height: 0;
+}
+.hero__art img {
+  width: 100%;
+  height: clamp(190px, 34svh, 400px);
+  object-fit: cover;
+  object-position: 50% 62%;
+}
+.hero__badge { margin-bottom: clamp(14px, 2.4vh, 22px); }
+.hero__wordmark { width: min(580px, 86vw); }
+.hero__tagline {
+  max-width: 32ch;
+  margin: clamp(6px, 1.6vh, 16px) 0 0;
+  font-size: clamp(21px, 4.6vw, 32px);
+}
+.hero__lede {
+  max-width: 48ch;
+  margin: clamp(14px, 2.4vh, 22px) 0 0;
+  font-size: clamp(15px, 2vw, 17px);
+  line-height: 1.72;
+}
+.hero__actions { margin-top: clamp(20px, 3.4vh, 32px); }
+.hero__facts { margin-top: clamp(20px, 3vh, 28px); }
+
+/* A desktop: the whole hero on one screen, below the header, with nothing to
+ * scroll for. Every height is a share of the screen's height, so it fits a
+ * 1366×768 laptop as well as a 1440×900 monitor. Shorter windows (and phones)
+ * keep the stacked layout above. */
+@media (min-width: 901px) and (min-height: 560px) {
+  .hero {
+    min-height: calc(100svh - var(--header-h));
+    padding-bottom: 3svh;
+  }
+  .hero__art { margin-bottom: 2.4svh; }
+  .hero__art img { height: 25svh; }
+  /* The auto margins centre the words in whatever height is left under the
+   * illustration, so a tall screen gets even space above and below rather
+   * than an empty band at the bottom. */
+  .hero__badge { margin-top: auto; margin-bottom: 1.4svh; }
+  .hero__facts { margin-bottom: auto; }
+  .hero__wordmark { width: auto; height: 16svh; max-width: 560px; }
+  .hero__tagline { max-width: 40ch; margin-top: 1svh; font-size: clamp(20px, 3.3svh, 32px); }
+  .hero__lede { max-width: 62ch; margin-top: 1.4svh; font-size: clamp(14px, 2svh, 17px); line-height: 1.6; }
+  .hero__actions { margin-top: 2.6svh; }
+  .hero__facts { margin-top: 2svh; }
 }
 
 /* ── the envelope ──────────────────────────────────────────────────────── */
