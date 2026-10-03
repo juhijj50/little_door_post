@@ -379,3 +379,24 @@
   .lightbox__next { grid-row: 3; grid-column: 3; justify-self: end; }
   .lightbox__count { grid-column: 2; }
 }
+
+/* No dot in the edition badge on a phone: there the words take two lines, and
+ * a dot beside a two-line pill looks stray. The words stand alone, centred. */
+@media (max-width: 600px) {
+  .hero__badge-dot {
+    display: none;
+  }
+  .hero__badge > div {
+    justify-content: center;
+    text-align: center !important;
+    padding: 7px 18px !important;
+  }
+  /* Two lines on a phone: what has sold out, then what is next — no
+   * separator dot at the end of the first. */
+  .hero__badge-sep {
+    display: none;
+  }
+  .hero__badge-lead {
+    display: block;
+  }
+}

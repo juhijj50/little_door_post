@@ -197,11 +197,14 @@ function EditionBadge({ edition }) {
     >
       <span
         aria-hidden="true"
+        className="hero__badge-dot"
         style={css(`flex:none;width:7px;height:7px;border-radius:50%;background:${soldOut ? "#b5503f" : "var(--color-accent-600)"}`)}
       />
       {soldOut ? (
         <span>
-          <strong>{edition.name} is sold out</strong> &middot; {edition.next.name} opens soon
+          <strong className="hero__badge-lead">{edition.name} is sold out</strong>
+          <span className="hero__badge-sep"> &middot; </span>
+          {edition.next.name} opens soon
         </span>
       ) : (
         <span>
