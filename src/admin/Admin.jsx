@@ -6,6 +6,7 @@
  *    Edition   which month is on sale; open, sold out, or move on
  *    Envelope  what is in each edition's envelope, and its photograph
  *    Gallery   upload and delete the photographs on the site
+ *    Site images  the hero picture, and the Meet Iris / Receive a letter backgrounds
  *    Readers   look somebody up, cancel or reinstate; Excel per edition
  *    Prices    the rate card
  *    Account   change the password, sign out
@@ -26,6 +27,7 @@ import {
   saveContents,
   setEdition,
   setPlan,
+  setSiteImage,
   setSubscriptionStatus,
   signIn,
   signOut,
@@ -474,6 +476,112 @@ function GalleryTab({ data, reload }) {
   );
 }
 
+/* ── site images ───────────────────────────────────────────────────────── */
+
+const SLOTS = [
+  {
+    slot: "hero",
+    title: "Top of the page",
+    help: "The wide picture across the top of the home page. Use a landscape image, at least 1800px wide — the band crops some of the top and bottom.",
+    fallback: { src: "/assets/forest.webp", label: "The watercolour forest" },
+    shape: "aspect-ratio:16/5",
+  },
+  {
+    slot: "meet",
+    title: "Behind “Meet Iris”",
+    help: "Shown as it is, across the whole section. The text is light, so a darker picture — or one that is darker on the left — reads best.",
+    fallback: { colour: "var(--color-accent-800)", label: "Plain dark green" },
+    shape: "aspect-ratio:16/7",
+  },
+  {
+    slot: "subscribe",
+    title: "Behind “Receive a letter”",
+    help: "Shown as it is, around the sign-up form. The form sits on its own card, so any picture works.",
+    fallback: { src: "/assets/gallery-green-seals.webp", label: "Green envelopes with wax seals" },
+    shape: "aspect-ratio:16/7",
+  },
+];
+
+function SiteImageCard({ def, current, reload }) {
+  const { busy, msg, run } = useAction();
+  const fileRef = useRef(null);
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const done = await run(async () => {
+      const row = await uploadImage(file, { kind: "site" });
+      return setSiteImage(def.slot, row.id);
+    }, "Saved — it is on the site now.");
+    if (done) reload();
+  };
+
+  const reset = async () => {
+    if (!window.confirm(`Go back to the original for "${def.title}"? Your picture will be deleted.`)) return;
+    const done = await run(() => setSiteImage(def.slot, null), "Back to the original.");
+    if (done) reload();
+  };
+
+  const preview = current ? mediaUrl(current) : def.fallback.src;
+  return (
+    <section className="adm-card">
+      <h3>{def.title}</h3>
+      <p className="adm-help">{def.help}</p>
+      <div
+        style={{
+          borderRadius: 12,
+          overflow: "hidden",
+          border: "1px solid var(--color-neutral-300)",
+          background: def.fallback.colour || "var(--color-neutral-200)",
+          aspectRatio: def.shape.split(":")[1],
+          display: "grid",
+          placeItems: "center",
+        }}
+      >
+        {preview ? (
+          <img src={preview} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+        ) : (
+          <span style={{ color: "var(--color-neutral-200)", fontSize: 14 }}>{def.fallback.label}</span>
+        )}
+      </div>
+      <p className="adm-help" style={{ margin: "8px 0 12px" }}>
+        {current ? "Your picture." : `The original: ${def.fallback.label.toLowerCase()}.`}
+      </p>
+      <div className="adm-row">
+        <button className="adm-btn adm-btn--primary" disabled={busy} onClick={() => fileRef.current?.click()}>
+          {busy ? "Uploading…" : current ? "Replace picture" : "Upload a picture"}
+        </button>
+        {current && (
+          <button className="adm-btn adm-btn--danger" disabled={busy} onClick={reset}>
+            Use the original
+          </button>
+        )}
+      </div>
+      <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onFile} />
+      <div style={{ marginTop: 12 }}><Msg msg={msg} /></div>
+    </section>
+  );
+}
+
+function SiteImagesTab({ data, reload }) {
+  const current = data.site_images || {};
+  return (
+    <>
+      <section className="adm-card">
+        <h2>Site images</h2>
+        <p className="adm-help" style={{ margin: 0 }}>
+          The big pictures on the home page. Uploading one puts it on the site straight away; it is
+          shrunk first, and the location a phone stores in a photo is removed.
+        </p>
+      </section>
+      {SLOTS.map((def) => (
+        <SiteImageCard key={def.slot} def={def} current={current[def.slot]} reload={reload} />
+      ))}
+    </>
+  );
+}
+
 /* ── readers ───────────────────────────────────────────────────────────── */
 
 function ReadersTab({ data }) {
@@ -710,6 +818,7 @@ const TABS = [
   ["edition", "Edition"],
   ["envelope", "Envelope"],
   ["gallery", "Gallery"],
+  ["site", "Site images"],
   ["readers", "Readers"],
   ["prices", "Prices"],
   ["account", "Account"],
@@ -761,6 +870,7 @@ function Dashboard({ onOut }) {
         {data && tab === "edition" && <EditionTab {...props} />}
         {data && tab === "envelope" && <EnvelopeTab key={data.edition.cycle} {...props} />}
         {data && tab === "gallery" && <GalleryTab {...props} />}
+        {data && tab === "site" && <SiteImagesTab {...props} />}
         {data && tab === "readers" && <ReadersTab {...props} />}
         {data && tab === "prices" && <PricesTab {...props} />}
         {data && tab === "account" && <AccountTab {...props} onOut={onOut} />}

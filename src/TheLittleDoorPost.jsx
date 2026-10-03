@@ -64,34 +64,6 @@ const NAV = [
 const TORN_EDGE =
   "polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)";
 
-/* A four-pointed sparkle, drawn rather than a round dot — a dot on its own
- * reads as a speck of dust on the screen. Decorative only. */
-const Sparkle = ({ pos, size, color, delay }) => (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-    style={css(
-      `position:absolute;${pos};color:${color};pointer-events:none;animation:ldp-sparkle 4.8s ${delay} ease-in-out infinite`
-    )}
-  >
-    <path
-      fill="currentColor"
-      d="M12 0c.9 6.6 4.4 10.4 12 12-7.6 1.6-11.1 5.4-12 12-.9-6.6-4.4-10.4-12-12C7.6 10.4 11.1 6.6 12 0Z"
-    />
-  </svg>
-);
-
-/* [position around the wordmark, size, colour, animation delay]. Two on each
- * side, staggered high and low, so they balance without mirroring. */
-const SPARKLES = [
-  ["left:-7%;top:14%", 18, "var(--color-accent-2-400)", "0s"],
-  ["left:-2%;top:66%", 10, "#d98f8a", "-1.6s"],
-  ["right:-6%;top:4%", 12, "#d98f8a", "-2.8s"],
-  ["right:-8%;top:56%", 20, "var(--color-accent-400)", "-0.9s"],
-];
-
 /* The separators in the line of facts under the buttons — one colour, so
  * they read as punctuation rather than decoration. */
 const dot = css("width:4px;height:4px;border-radius:50%;background:var(--color-accent-400);flex:none");
@@ -215,9 +187,51 @@ function EditionBadge({ edition }) {
   );
 }
 
+/*  The pictures set in the admin panel's "Site images" tab: the hero, and the
+ *  backgrounds behind Meet Iris and Receive a letter.
+ *
+ *  Remembered in this browser from the last visit, so a returning reader sees
+ *  the right hero at once rather than waiting on an API that may be asleep.
+ *  A first-time visitor sees an empty band for that moment instead — never
+ *  the old built-in picture flashing up and then being swapped out. If the
+ *  API cannot be reached at all, the built-in pictures stand in.
+ */
+const SITE_IMAGES_KEY = "ldp.siteImages.v1";
+
+const rememberedSiteImages = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(SITE_IMAGES_KEY) || "null");
+  } catch {
+    return null;
+  }
+};
+
+function useSiteImages(config, failed) {
+  const [remembered] = useState(rememberedSiteImages);
+  const live = config?.siteImages;
+  useEffect(() => {
+    if (!live) return;
+    try {
+      window.localStorage.setItem(SITE_IMAGES_KEY, JSON.stringify(live));
+    } catch {
+      /* Private mode — it simply is not remembered. */
+    }
+  }, [live]);
+  if (live) return live;
+  if (failed) return {};
+  return remembered; // null: not known yet
+}
+
+const DEFAULT_HERO = "/assets/forest.webp";
+const DEFAULT_SUBSCRIBE_BG = "/assets/gallery-green-seals.webp";
+
 export default function TheLittleDoorPost() {
   const { config, failed } = useConfig();
   const edition = config?.edition;
+  const site = useSiteImages(config, failed);
+  const heroSrc = site ? mediaUrl(site.hero) || DEFAULT_HERO : null;
+  const meetBg = site ? mediaUrl(site.meet) : null;
+  const subscribeBg = site ? mediaUrl(site.subscribe) || DEFAULT_SUBSCRIBE_BG : null;
 
   const items = config?.envelope?.items?.length ? config.envelope.items : ENVELOPE_FALLBACK;
   const envelopeImage = mediaUrl(config?.envelope?.image) || "/assets/envelope-white.webp";
@@ -235,10 +249,15 @@ export default function TheLittleDoorPost() {
       {/* ── hero ───────────────────────────────────────────────────────── */}
       <section id="top" className="hero">
         <div className="hero__art">
+          {/* The band keeps its height while the picture is not known yet. */}
           <img
-            src="/assets/forest.webp"
-            alt="A watercolour clearing of mushroom folk, pinecone people and paper ghosts"
-            style={css("animation:ldp-fade 1.4s both")}
+            key={heroSrc || "pending"}
+            src={heroSrc || undefined}
+            alt={heroSrc === DEFAULT_HERO ? "A watercolour clearing of mushroom folk, pinecone people and paper ghosts" : ""}
+            style={css(
+              "background:var(--color-neutral-200);animation:ldp-fade 1.4s both;" +
+                (heroSrc === DEFAULT_HERO ? "" : "object-position:50% 50%")
+            )}
           />
           <div
             style={{
@@ -259,20 +278,12 @@ export default function TheLittleDoorPost() {
           <EditionBadge edition={edition} />
         </div>
 
-        {/* The sparkles are placed around the wordmark itself, in percentages
-          * of its box, so they frame it at every screen size instead of
-          * floating loose at the edges of the page. */}
-        <div style={css("position:relative;display:flex;justify-content:center")}>
-          <img
-            className="hero__wordmark"
-            src="/assets/wordmark.png"
-            alt="The Little Door Post"
-            style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
-          />
-          {SPARKLES.map(([pos, size, color, delay]) => (
-            <Sparkle key={pos} pos={pos} size={size} color={color} delay={delay} />
-          ))}
-        </div>
+        <img
+          className="hero__wordmark"
+          src="/assets/wordmark.png"
+          alt="The Little Door Post"
+          style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
+        />
 
         <p
           className="hero__tagline"
@@ -327,21 +338,31 @@ export default function TheLittleDoorPost() {
       {/* ── meet Iris ──────────────────────────────────────────────────── */}
       <section
         id="meet"
-        style={css(
-          "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background:var(--color-accent-800);color:var(--color-neutral-200);overflow:hidden"
-        )}
+        style={{
+          ...css(
+            "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background-color:var(--color-accent-800);color:var(--color-neutral-200);overflow:hidden"
+          ),
+          /* The panel's picture, shown as it is — no wash over it. */
+          ...(meetBg ? { backgroundImage: `url("${meetBg}")`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+        }}
       >
-        <div
-          style={css(
-            "position:absolute;left:66%;top:44%;width:min(760px,120vw);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle, rgba(196,205,159,.20) 0%, transparent 66%);pointer-events:none"
-          )}
-        />
+        {/* The soft glow belongs to the plain green; over a photograph it
+          * would only haze it. */}
+        {!meetBg && (
+          <div
+            style={css(
+              "position:absolute;left:66%;top:44%;width:min(760px,120vw);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle, rgba(196,205,159,.20) 0%, transparent 66%);pointer-events:none"
+            )}
+          />
+        )}
         <div
           style={css(
             "position:relative;width:min(1120px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:clamp(26px,5vw,60px);align-items:center"
           )}
         >
-          <div>
+          {/* Over a photograph the light text gets a soft shadow, so it stays
+            * readable on whatever the picture has behind it. */}
+          <div style={meetBg ? { textShadow: "0 1px 3px rgba(0,0,0,.55), 0 2px 18px rgba(0,0,0,.45)" } : undefined}>
             <div style={css("display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-accent-300)")}>
               <span style={css("width:26px;height:1px;background:var(--color-accent-300)")} />
               The letter-writer
@@ -470,17 +491,18 @@ export default function TheLittleDoorPost() {
 
       {/* ── sign up ────────────────────────────────────────────────────── */}
       <section id="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
-        <div style={css("position:absolute;inset:0;pointer-events:none")}>
-          <img
-            src="/assets/gallery-green-seals.webp"
-            alt=""
-            style={css("width:100%;height:100%;object-fit:cover;filter:saturate(.62) brightness(1.06)")}
-          />
-          <div
-            style={css(
-              "position:absolute;inset:0;background:linear-gradient(180deg, rgba(248,243,232,.92) 0%, rgba(248,243,232,.82) 40%, rgba(248,243,232,.94) 100%)"
-            )}
-          />
+        {/* The picture behind the form, shown as it is: no pale wash over it
+          * and no fading of its colours. The form sits on its own solid card,
+          * so it stays readable whatever is behind. */}
+        <div style={css("position:absolute;inset:0;pointer-events:none;background:var(--color-neutral-200)")}>
+          {subscribeBg && (
+            <img
+              src={subscribeBg}
+              alt=""
+              loading="lazy"
+              style={css("width:100%;height:100%;object-fit:cover")}
+            />
+          )}
         </div>
 
         <div

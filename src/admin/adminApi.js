@@ -125,6 +125,11 @@ export const setSubscriptionStatus = (id, status, note) =>
 export const setPlan = (region, months, amount_minor, active) =>
   call(`/admin/plans/${region}/${months}`, { method: "PUT", json: { amount_minor, active } });
 
+/* The hero picture, or a section background: slot is hero | meet | subscribe.
+ * A null id puts the site's built-in one back. */
+export const setSiteImage = (slot, media_id) =>
+  call(`/admin/site-images/${slot}`, { method: "PUT", json: { media_id } });
+
 export const deleteMedia = (id) => call(`/admin/media/${id}`, { method: "DELETE" });
 
 /* ── photographs ─────────────────────────────────────────────────────────── */
@@ -134,8 +139,11 @@ export const deleteMedia = (id) => call(`/admin/media/${id}`, { method: "DELETE"
  * kilobytes — and the redraw also drops the photo's metadata, including the
  * GPS position a phone writes into every picture it takes. */
 const MAX_SIDE = 1800;
+/* The hero and the section backgrounds fill the whole width of a large
+ * screen, so they are kept larger. */
+const MAX_SIDE_WIDE = 2400;
 
-export async function shrinkImage(file) {
+export async function shrinkImage(file, maxSide = MAX_SIDE) {
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -144,7 +152,7 @@ export async function shrinkImage(file) {
       el.onerror = () => reject(new ApiError(`${file.name} is not an image this browser can open.`));
       el.src = url;
     });
-    const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
@@ -164,7 +172,7 @@ export async function shrinkImage(file) {
 }
 
 export const uploadImage = async (file, { kind = "gallery", caption = "" } = {}) => {
-  const blob = await shrinkImage(file);
+  const blob = await shrinkImage(file, kind === "site" ? MAX_SIDE_WIDE : MAX_SIDE);
   const query = new URLSearchParams({ kind, ...(caption ? { caption } : {}) });
   return call(`/admin/media?${query}`, {
     method: "POST",

@@ -132,11 +132,6 @@
 
 /* ── the hero ──────────────────────────────────────────────────────────── */
 
-/* The sparkles round the wordmark: a slow glint, never fully gone. */
-@keyframes ldp-sparkle {
-  0%, 100% { opacity: 0.35; transform: scale(0.7) rotate(0deg); }
-  50% { opacity: 1; transform: scale(1) rotate(20deg); }
-}
 
 .hero {
   position: relative;
