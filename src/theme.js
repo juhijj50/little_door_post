@@ -66,6 +66,19 @@ export function applyTheme(theme) {
     root.style.setProperty("--heading-color", headingColour(headings));
     root.style.setProperty("--heading-soft", baseOf(headings));
   }
+
+  /* The form's highlights and the envelope's numbers: their own colour if one
+   * has been chosen, otherwise the buttons'. */
+  for (const [key, prop] of [["form", "--form-base"], ["numbers", "--num-base"]]) {
+    const colour = baseOf(theme?.[key]);
+    if (colour) {
+      root.dataset[key] = theme[key];
+      root.style.setProperty(prop, colour);
+    } else {
+      delete root.dataset[key];
+      root.style.removeProperty(prop);
+    }
+  }
 }
 
 /* Remembered between visits, so a returning reader sees the chosen colours
@@ -93,5 +106,5 @@ export function useSiteTheme(config) {
     if (!theme) return;
     applyTheme(theme);
     rememberTheme(theme);
-  }, [theme?.buttons, theme?.headings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [theme?.buttons, theme?.headings, theme?.form, theme?.numbers]); // eslint-disable-line react-hooks/exhaustive-deps
 }

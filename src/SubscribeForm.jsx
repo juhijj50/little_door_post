@@ -238,9 +238,9 @@ const Stepper = ({ part, onGo }) => (
             style={css(
               "display:grid;place-items:center;width:22px;height:22px;border-radius:50%;font-size:12px;flex:none;" +
                 (here
-                  ? "background:var(--color-accent-600);color:#fff"
+                  ? "background:var(--form-600);color:#fff"
                   : done
-                  ? "background:var(--color-accent-200);color:var(--color-accent-800)"
+                  ? "background:var(--form-200);color:var(--form-800)"
                   : "background:var(--color-neutral-200);color:var(--color-neutral-600)")
             )}
           >
@@ -343,7 +343,7 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
             style={css(
               "display:flex;align-items:flex-start;gap:14px;width:100%;padding:15px 18px;border-radius:var(--radius-md);font-size:15px;" +
                 (on
-                  ? "border:1px solid var(--color-accent-500);background:var(--color-accent-100)"
+                  ? "border:1px solid var(--form-500);background:var(--form-100)"
                   : "border:1px solid var(--color-neutral-300);background:var(--color-neutral-100)")
             )}
           >
@@ -387,7 +387,7 @@ const PlanPicker = ({ options, value, onChange, error, pending }) => {
                 >
                   <span
                     style={css(
-                      "padding:2px 10px;border-radius:999px;background:var(--color-accent-200);color:var(--color-accent-800)"
+                      "padding:2px 10px;border-radius:999px;background:var(--form-200);color:var(--form-800)"
                     )}
                   >
                     You save {money(saving, plan.currency)} &middot; {Math.round((saving / full) * 100)}% off
@@ -835,7 +835,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               setAgreed(e.target.checked);
               if (e.target.checked) setFormError("");
             }}
-            style={css("width:18px;height:18px;margin-top:1px;flex:none;accent-color:var(--color-accent-600)")}
+            style={css("width:18px;height:18px;margin-top:1px;flex:none;accent-color:var(--form-600)")}
           />
           {/* New tab, deliberately: a policy opened in this one would unmount
             * the form a click before payment. */}
@@ -877,13 +877,13 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
     return (
       <div
         style={css(
-          "border:1px solid var(--color-accent-300);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--color-accent-100);animation:ldp-rise .7s cubic-bezier(.2,.7,.2,1) both"
+          "border:1px solid var(--form-500);border-radius:var(--radius-md);padding:clamp(22px,4vw,32px);background:var(--form-100);animation:ldp-rise .7s cubic-bezier(.2,.7,.2,1) both"
         )}
       >
         <div style={css("display:flex;align-items:center;gap:10px")}>
           <span
             aria-hidden="true"
-            style={css("display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--color-accent-600);color:#fff;font-size:17px;flex:none")}
+            style={css("display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--form-600);color:#fff;font-size:17px;flex:none")}
           >
             &#10003;
           </span>
@@ -972,7 +972,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                 style={css(
                   "display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:var(--radius-md);font-size:15px;" +
                     (on
-                      ? "border:1px solid var(--color-accent-500);background:var(--color-accent-100)"
+                      ? "border:1px solid var(--form-500);background:var(--form-100)"
                       : "border:1px solid var(--color-neutral-300);background:var(--color-neutral-100)")
                 )}
               >
@@ -1248,7 +1248,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             * die. */}
           <div
             style={css(
-              "display:flex;flex-direction:column;gap:var(--space-3);padding:14px;border-radius:var(--radius-md);background:var(--color-accent-100)"
+              "display:flex;flex-direction:column;gap:var(--space-3);padding:14px;border-radius:var(--radius-md);background:var(--form-100)"
             )}
           >
             {/* Written out rather than picked from a list. A row of tick-boxes
@@ -1281,7 +1281,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
                   type="checkbox" checked={values.is_gift}
                   onChange={(e) => set("is_gift", e.target.checked)}
                   style={css(
-                    "position:static;opacity:1;width:18px;height:18px;pointer-events:auto;accent-color:var(--color-accent-600)"
+                    "position:static;opacity:1;width:18px;height:18px;pointer-events:auto;accent-color:var(--form-600)"
                   )}
                 />
                 <span>This is a gift for somebody else</span>

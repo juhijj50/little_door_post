@@ -898,33 +898,54 @@ const toHex = (choice) => baseOf(choice) || PALETTES.sage.base;
 const toChoice = (hex) =>
   Object.entries(PALETTES).find(([, p]) => p.base === hex.toLowerCase())?.[0] || hex.toLowerCase();
 
+/* The four colours, in the order they are offered. `follows` are the two that
+ * match the buttons until a colour is chosen for them. */
+const COLOUR_PARTS = [
+  { key: "buttons", label: "Buttons", help: "Every button, and the plain background behind Meet Iris." },
+  { key: "headings", label: "Headings", help: "Titles, and the small capitals above them." },
+  { key: "form", label: "Form", follows: true, help: "In the sign-up form: the chosen options, the savings, the round tick boxes and the steps." },
+  { key: "numbers", label: "Numbers", follows: true, help: "The numbered circles in “What’s in the envelope”." },
+];
+
 function ColoursCard({ theme, reload }) {
-  const [buttons, setButtons] = useState(toHex(theme.buttons));
-  const [headings, setHeadings] = useState(toHex(theme.headings));
+  /* Each colour as a hex for the picker; null for "same as the buttons". */
+  const start = () => ({
+    buttons: toHex(theme.buttons),
+    headings: toHex(theme.headings),
+    form: theme.form ? toHex(theme.form) : null,
+    numbers: theme.numbers ? toHex(theme.numbers) : null,
+  });
+  const [colours, setColours] = useState(start);
   const [editing, setEditing] = useState("buttons");
   const { busy, msg, run } = useAction();
-  const changed = toChoice(buttons) !== theme.buttons || toChoice(headings) !== theme.headings;
-  const tooLight = lightness(buttons) > 0.42;
+
+  const set = (key) => (hex) => setColours((c) => ({ ...c, [key]: hex }));
+  const shown = (key) => colours[key] || colours.buttons; // what the site will use
+  const asChoice = (key) => (colours[key] ? toChoice(colours[key]) : COLOUR_PARTS.find((p) => p.key === key).follows ? "" : "sage");
+  const saved = (key) => theme[key] || "";
+  const changed = COLOUR_PARTS.some(({ key }) => asChoice(key) !== saved(key));
+  const part = COLOUR_PARTS.find((p) => p.key === editing);
+  const tooLight = lightness(colours.buttons) > 0.42;
 
   const save = async () => {
-    const done = await run(
-      () => setTheme({ buttons: toChoice(buttons), headings: toChoice(headings) }),
-      "Saved — the site uses these colours now."
-    );
+    const body = Object.fromEntries(COLOUR_PARTS.map(({ key }) => [key, asChoice(key)]));
+    const done = await run(() => setTheme(body), "Saved — the site uses these colours now.");
     if (done) reload();
   };
 
+  const btn = colours.buttons;
+  const form = shown("form");
+  const num = shown("numbers");
   return (
     <section className="adm-card">
       <h3>Colours</h3>
       <p className="adm-help">
-        Pick any colour for the buttons (and the highlights that go with them) and for the headings
-        — drag in the box, slide the hue, or type a hex code. The saved colours are ready-made
-        palettes; Sage is the original look.
+        Pick any colour — drag in the box, slide the hue, or type a hex code. The saved colours are
+        ready-made palettes; Sage is the original look.
       </p>
 
-      <div className="adm-row" role="tablist" aria-label="Which colour" style={{ marginBottom: 14 }}>
-        {[["buttons", "Buttons", buttons], ["headings", "Headings", headings]].map(([key, label, hex]) => (
+      <div className="adm-row" role="tablist" aria-label="Which colour" style={{ marginBottom: 6 }}>
+        {COLOUR_PARTS.map(({ key, label }) => (
           <button
             key={key}
             type="button"
@@ -933,51 +954,97 @@ function ColoursCard({ theme, reload }) {
             className={`adm-btn${editing === key ? " adm-btn--primary" : ""}`}
             onClick={() => setEditing(key)}
           >
-            <span style={{ width: 14, height: 14, borderRadius: "50%", background: hex, boxShadow: "0 0 0 2px rgba(255,255,255,.8)" }} />
+            <span style={{ width: 14, height: 14, borderRadius: "50%", background: shown(key), boxShadow: "0 0 0 2px rgba(255,255,255,.8)" }} />
             {label}
           </button>
         ))}
       </div>
+      <p className="adm-help" style={{ margin: "0 0 14px" }}>{part.help}</p>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start" }}>
-        {editing === "buttons" ? (
-          <ColourPicker key="buttons" value={buttons} onChange={setButtons} />
-        ) : (
-          <ColourPicker key="headings" value={headings} onChange={setHeadings} />
-        )}
+        <div style={{ display: "grid", gap: 10 }}>
+          {part.follows && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={!colours[editing]}
+                onChange={(e) => set(editing)(e.target.checked ? null : colours.buttons)}
+                style={{ width: 18, height: 18 }}
+              />
+              Same as the buttons
+            </label>
+          )}
+          <div style={{ opacity: part.follows && !colours[editing] ? 0.45 : 1, pointerEvents: part.follows && !colours[editing] ? "none" : "auto" }}>
+            <ColourPicker key={editing} value={shown(editing)} onChange={set(editing)} />
+          </div>
+        </div>
 
         {/* A small piece of the site in the chosen colours. */}
         <div
           style={{
-            flex: "1 1 260px",
+            flex: "1 1 280px",
+            display: "grid",
+            gap: 14,
             padding: "22px 24px",
             borderRadius: 18,
-            background: `linear-gradient(135deg, color-mix(in oklab, ${buttons} 12%, #fffdf7), #fffdf7 60%, color-mix(in oklab, ${headings} 10%, #fffdf7))`,
+            background: "#fffdf7",
             border: "1px solid var(--color-neutral-300)",
           }}
         >
-          <div style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 600, color: headings }}>
-            Preview
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: ".2em", textTransform: "uppercase", fontWeight: 600, color: colours.headings }}>
+              Preview
+            </div>
+            <div style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 30, lineHeight: 1.1, marginTop: 6, color: headingColour(colours.headings) }}>
+              What&rsquo;s in the envelope
+            </div>
           </div>
-          <div style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 32, lineHeight: 1.1, margin: "6px 0 14px", color: headingColour(headings) }}>
-            What&rsquo;s in the envelope
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                display: "grid", placeItems: "center", width: 28, height: 28, borderRadius: "50%",
+                background: `color-mix(in oklab, ${num} 22%, #fffdf7)`, color: `color-mix(in oklab, ${num} 62%, #14110d)`,
+                fontFamily: "var(--font-heading)", fontWeight: 600,
+              }}
+            >
+              1
+            </span>
+            <span style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 17, color: headingColour(colours.headings) }}>
+              A letter from Iris
+            </span>
           </div>
+
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 10,
+              border: `1px solid color-mix(in oklab, ${form} 84%, #fffdf7)`, background: `color-mix(in oklab, ${form} 10%, #fffdf7)`,
+            }}
+          >
+            <span style={{ width: 16, height: 16, borderRadius: "50%", background: form, boxShadow: "inset 0 0 0 3px #fffdf7, 0 0 0 1.5px " + form }} />
+            <span style={{ flex: 1, fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 17 }}>3 months</span>
+            <span style={{ fontSize: 12, padding: "2px 10px", borderRadius: 999, background: `color-mix(in oklab, ${form} 22%, #fffdf7)`, color: `color-mix(in oklab, ${form} 62%, #14110d)` }}>
+              You save ₹147
+            </span>
+          </div>
+
           <span
             style={{
+              justifySelf: "start",
               display: "inline-flex",
               padding: "11px 22px",
               borderRadius: 999,
               color: "#fff",
               fontFamily: "var(--font-heading)",
               fontWeight: 600,
-              background: `linear-gradient(180deg, color-mix(in oklab, ${buttons} 84%, #fffdf7), ${buttons} 55%, color-mix(in oklab, ${buttons} 80%, #14110d))`,
-              boxShadow: `0 6px 18px color-mix(in srgb, ${buttons} 32%, transparent)`,
+              background: `linear-gradient(180deg, color-mix(in oklab, ${btn} 84%, #fffdf7), ${btn} 55%, color-mix(in oklab, ${btn} 80%, #14110d))`,
+              boxShadow: `0 6px 18px color-mix(in srgb, ${btn} 32%, transparent)`,
             }}
           >
             Receive a letter
           </span>
           {tooLight && (
-            <p className="adm-help" style={{ margin: "12px 0 0", color: "#8c2523" }}>
+            <p className="adm-help" style={{ margin: 0, color: "#8c2523" }}>
               This button colour is very light — the white writing on it may be hard to read. A
               deeper shade works better.
             </p>
@@ -990,11 +1057,7 @@ function ColoursCard({ theme, reload }) {
           {busy ? "Saving…" : "Save colours"}
         </button>
         {changed && (
-          <button
-            className="adm-btn adm-btn--ghost"
-            disabled={busy}
-            onClick={() => { setButtons(toHex(theme.buttons)); setHeadings(toHex(theme.headings)); }}
-          >
+          <button className="adm-btn adm-btn--ghost" disabled={busy} onClick={() => setColours(start())}>
             Undo changes
           </button>
         )}
@@ -1015,7 +1078,11 @@ function DesignTab({ data, reload }) {
           Pictures are shrunk before upload, and the location a phone stores in a photo is removed.
         </p>
       </section>
-      <ColoursCard theme={data.theme || { buttons: "sage", headings: "sage" }} reload={reload} />
+      <ColoursCard
+        key={JSON.stringify(data.theme)}
+        theme={data.theme || { buttons: "sage", headings: "sage", form: null, numbers: null }}
+        reload={reload}
+      />
       {SLOTS.map((def) => (
         <SiteImageCard
           key={def.slot}

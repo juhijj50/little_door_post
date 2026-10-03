@@ -438,7 +438,7 @@ export default function TheLittleDoorPost() {
               className="btn btn-primary meet__cta"
               href="/red-race"
               style={css(
-                "margin-top:clamp(20px,3vh,28px);padding:12px 22px;font-size:15px;background:var(--color-accent-300);border-color:var(--color-accent-300);color:var(--color-accent-900)"
+                "margin-top:clamp(20px,3vh,28px);padding:12px 22px;font-size:15px"
               )}
             >
               Read her first letter
@@ -495,7 +495,7 @@ export default function TheLittleDoorPost() {
                 <div style={css("display:flex;align-items:center;gap:10px")}>
                   <span
                     style={css(
-                      "flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--color-accent-200);color:var(--color-accent-800);font-family:var(--font-heading);font-weight:600;font-size:14px;line-height:1"
+                      "flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--num-bg);color:var(--num-ink);font-family:var(--font-heading);font-weight:600;font-size:14px;line-height:1"
                     )}
                   >
                     {i + 1}

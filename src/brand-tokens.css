@@ -217,3 +217,52 @@ a:hover {
   background: var(--glass-bg-strong);
   transform: translateY(-1px);
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   The form's highlights and the envelope's numbers
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Both follow the buttons' colour until one is chosen for them in the panel
+ * (theme.js sets data-form / data-numbers and the base colour). */
+:root {
+  --form-100: var(--color-accent-100);
+  --form-200: var(--color-accent-200);
+  --form-500: var(--color-accent-500);
+  --form-600: var(--color-accent-600);
+  --form-800: var(--color-accent-800);
+  --num-bg: var(--color-accent-200);
+  --num-ink: var(--color-accent-800);
+}
+:root[data-form] {
+  --form-100: color-mix(in oklab, var(--form-base) 10%, #fffdf7);
+  --form-200: color-mix(in oklab, var(--form-base) 22%, #fffdf7);
+  --form-500: color-mix(in oklab, var(--form-base) 84%, #fffdf7);
+  --form-600: var(--form-base);
+  --form-800: color-mix(in oklab, var(--form-base) 62%, #14110d);
+}
+:root[data-numbers] {
+  --num-bg: color-mix(in oklab, var(--num-base) 22%, #fffdf7);
+  --num-ink: color-mix(in oklab, var(--num-base) 62%, #14110d);
+}
+
+/* The radio dots in the form. */
+.radio:hover .dot { border-color: var(--form-600); }
+.radio input:checked + .dot {
+  border-color: var(--form-600);
+  background: var(--form-600);
+}
+
+/* A button that is a link must keep its own text colour on hover. The
+ * general link rule (a:hover) is more specific than .btn-primary alone, and
+ * turned the writing the same colour as the button — so it vanished. */
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-primary:focus,
+a.btn-primary:active {
+  color: var(--color-neutral-100);
+}
+a.btn-secondary,
+a.btn-secondary:hover,
+a.btn-secondary:focus {
+  color: var(--color-text);
+}
