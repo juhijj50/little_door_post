@@ -230,7 +230,7 @@ function EditionTab({ data, reload }) {
         <div className="adm-table-wrap">
           <table className="adm-table">
             <thead>
-              <tr><th>Edition</th><th>Status</th><th>Paid sign-ups</th><th>Envelopes posted</th><th>Taken</th><th /></tr>
+              <tr><th>Edition</th><th>Status</th><th>Paid sign-ups</th><th>Envelopes</th><th>Taken</th><th /></tr>
             </thead>
             <tbody>
               {editions.map((e) => (
@@ -238,7 +238,15 @@ function EditionTab({ data, reload }) {
                   <td><strong>{e.name}</strong>{e.is_current && <span className="adm-pill adm-pill--muted" style={{ marginLeft: 8 }}>on the site</span>}</td>
                   <td>{e.is_current ? <Pill status={e.status} /> : <span className="adm-help" style={{ margin: 0 }}>{e.counted ? "Posted" : "—"}</span>}</td>
                   <td>{e.signups}</td>
-                  <td>{e.posted_to || "—"}</td>
+                  {/* On sale: everyone it goes to, longer plans included.
+                    * Past: how many were sent. Not open yet: nothing until it is. */}
+                  <td>
+                    {e.is_current
+                      ? `${stats.to_post_this_edition} to post`
+                      : e.posted_to
+                      ? `${e.posted_to} posted`
+                      : "—"}
+                  </td>
                   <td>{e.revenue.join(" + ") || "—"}</td>
                   <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     {e.can_undo && (
@@ -510,8 +518,9 @@ function ReadersTab({ data }) {
         <p className="adm-help">
           An Excel file with two sheets. <strong>To post</strong> (the first) lists everyone that edition&rsquo;s
           envelope goes to — including readers on longer plans who joined in an earlier month — with address, phone,
-          email, Instagram, birthday and their notes. <strong>Signed up</strong> lists only the new purchases made for
-          that edition, with the amount paid.
+          email, Instagram, birthday and their notes. It fills in once the edition is on sale: that is when the readers
+          with envelopes left are known. <strong>Signed up</strong> lists only the new purchases made for that
+          edition, with the amount paid.
         </p>
         <div className="adm-row">
           <select className="adm-select" style={{ width: "auto", minWidth: 200 }} value={exportCycle}
