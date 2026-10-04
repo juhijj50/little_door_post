@@ -1114,13 +1114,13 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             <Field id="ldp-first" label="First name" error={fieldErrs.first_name}>
               <input
                 className="input" id="ldp-first" name="first_name" type="text" required
-                autoComplete="given-name" value={values.first_name} onChange={onChange} placeholder="Meera"
+                autoComplete="given-name" value={values.first_name} onChange={onChange}
               />
             </Field>
             <Field id="ldp-last" label="Last name" error={fieldErrs.last_name}>
               <input
                 className="input" id="ldp-last" name="last_name" type="text" required
-                autoComplete="family-name" value={values.last_name} onChange={onChange} placeholder="Raghavan"
+                autoComplete="family-name" value={values.last_name} onChange={onChange}
               />
             </Field>
           </div>
@@ -1128,7 +1128,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           <Field id="ldp-email" label="Email" error={fieldErrs.email}>
             <input
               className="input" id="ldp-email" name="email" type="email" required
-              autoComplete="email" value={values.email} onChange={onChange} placeholder="you@somewhere.com"
+              autoComplete="email" value={values.email} onChange={onChange} 
             />
           </Field>
 
