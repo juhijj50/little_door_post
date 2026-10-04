@@ -1,9 +1,11 @@
-/*  The gallery: a row of photographs with arrows, and any one of them full
+/*  The owner's gallery: photographs and nothing else — two rows of five, ten at
+ *  a time, sliding sideways a column at a time — and any one of them full
  *  screen with arrows of its own.
  *
- *  The photos come from /api/config — uploaded and deleted from the admin
- *  panel — so this renders whatever list it is handed. Styling for the row and
- *  the full-screen view is in site.css, which can hold the media queries.
+ *  The photos are the site's own files (content/images.js), uploaded and
+ *  deleted from the admin panel, so this renders whatever list it is handed.
+ *  Styling for the grid and the full-screen view is in site.css, which can hold
+ *  the media queries.
  */
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { css } from "./css.js";
@@ -73,15 +75,11 @@ function Lightbox({ photos, index, onClose, onGo }) {
         <Arrow dir="left" />
       </button>
       <figure className="lightbox__figure" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <img src={photo.src} alt={photo.caption || "A photograph of the post"} />
-        {photo.caption && <figcaption>{photo.caption}</figcaption>}
+        <img src={photo.src} alt={photo.caption || "A photograph from the owner's gallery"} />
       </figure>
       <button type="button" className="round-arrow lightbox__next" onClick={() => onGo(1)} aria-label="Next photo">
         <Arrow dir="right" />
       </button>
-      <div className="lightbox__count">
-        {index + 1} / {photos.length}
-      </div>
     </div>
   );
 }
@@ -109,7 +107,8 @@ export default function Gallery({ photos, pending }) {
 
   const page = (dir) => {
     const el = track.current;
-    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: "smooth" });
+    /* A screenful: five columns, ten photographs. */
+    if (el) el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
   };
 
   const go = useCallback(
@@ -121,8 +120,8 @@ export default function Gallery({ photos, pending }) {
   if (pending) {
     return (
       <div className="gallery__track" aria-busy="true">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="gallery__tile" style={css(`opacity:${0.9 - i * 0.12};cursor:default`)} />
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+          <div key={i} className="gallery__tile" style={css(`opacity:${0.9 - (i >> 1) * 0.15};cursor:default`)} />
         ))}
       </div>
     );
@@ -148,9 +147,9 @@ export default function Gallery({ photos, pending }) {
             type="button"
             className="gallery__tile"
             onClick={() => setOpen(i)}
-            aria-label={`Open photo ${i + 1}${p.caption ? `: ${p.caption}` : ""}`}
+            aria-label={`Open photo ${i + 1} of ${photos.length}`}
           >
-            <img src={p.src} alt={p.caption || ""} loading={i < 5 ? "eager" : "lazy"} />
+            <img src={p.src} alt={p.caption || ""} loading={i < 10 ? "eager" : "lazy"} />
           </button>
         ))}
       </div>

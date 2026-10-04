@@ -28,7 +28,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { css } from "./css.js";
 import { createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
 import { business } from "./business.js";
-import useConfig from "./useConfig.js";
+import useConfig, { useEdition, usePlans } from "./useConfig.js";
 
 const STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
@@ -194,8 +194,9 @@ const Field = ({ id, label, optional, hint, error, children }) => (
   </div>
 );
 
-const Legend = ({ children }) => (
+const Legend = ({ children, className }) => (
   <legend
+    className={className}
     style={css(
       "padding:0;font-family:var(--font-heading);font-weight:600;font-size:clamp(20px,2.8vw,25px);line-height:1.25;color:var(--color-heading)"
     )}
@@ -206,8 +207,9 @@ const Legend = ({ children }) => (
 
 /* A part of the form. `first` skips the rule above it, which is only there to
  * separate one part from the last. */
-const Part = ({ first, children }) => (
+const Part = ({ first, children, ...rest }) => (
   <fieldset
+    {...rest}
     style={css(
       "border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-3)" +
         (first ? "" : ";border-top:1px solid var(--color-neutral-300);padding-top:clamp(20px,3.2vh,30px)")
@@ -496,8 +498,8 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
   /* Only ever a warning if it fails. The form does not need /config to work —
    * it carries the price and nothing else — so a slow or missing answer must
    * not be allowed to bar the way. */
-  const { config, failed: configFailed } = useConfig();
-  const edition = config?.edition;
+  const { config } = useConfig();
+  const edition = useEdition();
 
   /* Read once, lazily, so a restored draft is in the very first render and
    * the reader never sees an empty form flash back to a full one. */
@@ -507,6 +509,11 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
   /* Which part is on screen. One at a time; the stepper and the Back buttons
    * move it in both directions. */
   const [part, setPart] = useState(() => restored?.part || 1);
+  /* On a phone the first part is two screens, not one: where it is going, then
+   * which plan. Together they were a long scroll — two choices stacked on a
+   * list of plans. From a desktop's width they are still shown together (see
+   * `.sub-*` in site.css), so this only matters below that. */
+  const [pick, setPick] = useState("where"); // where | plan
   const [done, setDone] = useState(readDone);
   const [stage, setStage] = useState(() => (done ? "sealed" : "form")); // form | pay | sealed
   const [values, setValues] = useState(() => restored?.values || EMPTY);
@@ -554,8 +561,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
    * the code to fall back on, so nobody is ever shown a figure the checkout
    * would not charge. While the API wakes the picker shows a placeholder; if
    * it cannot be reached at all, the reader is asked to refresh. */
-  const plans = config?.plans?.[region] || [];
-  const plansPending = !config && !configFailed;
+  const { plans, pending: plansPending } = usePlans(region);
   const plansMissing = !plansPending && !plans.length;
 
   /* A length on sale in India may not be on sale abroad (abroad is one letter
@@ -942,8 +948,9 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
 
       {/* 1 ── the subscription ─────────────────────────────────────────── */}
       {part === 1 && (
-      <Part first>
-        <Legend>1 &middot; Where is it going?</Legend>
+      <Part first className="sub-part" data-sub={pick}>
+        <Legend className="sub-where">1 &middot; Where is it going?</Legend>
+        <Legend className="sub-plan sub-mobile-only">1 &middot; Choose your plan</Legend>
         {edition && (
           <p style={{ ...muted, margin: "-4px 0 0" }}>
             Your subscription starts with the <strong>{edition.name}</strong> edition.
@@ -957,6 +964,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           * Asked before the plan because it decides the currency the plan is
           * priced in. */}
         <div
+          className="sub-where"
           role="radiogroup" aria-label="Where is it going?"
           style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:var(--space-2)")}
         >
@@ -996,7 +1004,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           * step. The server refuses these countries too — this list simply
           * does not offer them. */}
         {abroad && (
-          <>
+          <div className="sub-where" style={css("display:flex;flex-direction:column;gap:var(--space-3)")}>
             <Field id="ldp-country" label="Which country?" error={fieldErrs.country}>
               <select
                 className="input" id="ldp-country" name="country" required
@@ -1016,29 +1024,49 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               </a>
               . Everywhere else on the list is open.
             </p>
-          </>
+          </div>
         )}
 
-        <PlanPicker
-          pending={plansPending}
-          options={plans}
-          value={values.plan_months}
-          onChange={(m) => set("plan_months", m)}
-          error={fieldErrs.plan_months}
-        />
-        {plansMissing && (
-          <Notice>
-            This month&rsquo;s prices could not be loaded. Please refresh the page in a moment —
-            everything you have typed is kept.
-          </Notice>
-        )}
+        <div className="sub-plan" style={css("display:flex;flex-direction:column;gap:var(--space-3)")}>
+          <PlanPicker
+            pending={plansPending}
+            options={plans}
+            value={values.plan_months}
+            onChange={(m) => set("plan_months", m)}
+            error={fieldErrs.plan_months}
+          />
+          {plansMissing && (
+            <Notice>
+              This month&rsquo;s prices could not be loaded. Please refresh the page in a moment —
+              everything you have typed is kept.
+            </Notice>
+          )}
+        </div>
+
+        {/* "Somewhere else" with no country chosen is not an answer, and
+          * letting it through would price the plan in dollars for a
+          * destination nobody has named. */}
         <button
-          className="btn btn-primary"
+          className="btn btn-primary sub-where sub-mobile-only"
           type="button"
           onClick={() => {
-            /* "Somewhere else" with no country chosen is not an answer, and
-             * letting it through would price the plan in dollars for a
-             * destination nobody has named. */
+            if (abroad && !values.country) {
+              setFieldErrs({ country: "Choose the country it is going to." });
+              setFormError("Which country is it going to?");
+              return;
+            }
+            setFieldErrs({});
+            setFormError("");
+            setPick("plan");
+          }}
+          style={css("align-self:flex-start;padding:13px 24px;font-size:15px;margin-top:6px")}
+        >
+          Next: choose your plan
+        </button>
+        <button
+          className="btn btn-primary sub-plan"
+          type="button"
+          onClick={() => {
             if (abroad && !values.country) {
               setFieldErrs({ country: "Choose the country it is going to." });
               setFormError("Which country is it going to?");
@@ -1050,6 +1078,14 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           style={css("align-self:flex-start;padding:13px 24px;font-size:15px;margin-top:6px")}
         >
           Next: who it&rsquo;s for
+        </button>
+        <button
+          className="btn btn-ghost sub-plan sub-mobile-only"
+          type="button"
+          onClick={() => setPick("where")}
+          style={css("align-self:flex-start;font-size:13px")}
+        >
+          Back
         </button>
       </Part>
       )}

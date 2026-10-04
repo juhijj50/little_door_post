@@ -231,17 +231,20 @@
 .gallery {
   position: relative;
 }
-/* A row that scrolls sideways and snaps to each photo: five in view on a
- * desktop, fewer on smaller screens. The arrows move it a screenful at a time;
- * a finger or a trackpad moves it as freely as any scrolling row. */
+/* Photographs only: two rows, five columns on a desktop — ten in view — and
+ * the whole thing slides sideways a column at a time (each snaps into place),
+ * so a column of two always moves together. Fewer columns on smaller screens.
+ * The arrows move it a screenful; a finger or a trackpad moves it freely. */
 .gallery__track {
   --per-view: 5;
-  --gap: 16px;
+  --gap: 14px;
   display: grid;
+  grid-template-rows: repeat(2, auto);
   grid-auto-flow: column;
   grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
   gap: var(--gap);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
   scrollbar-width: none;
@@ -254,10 +257,10 @@
   .gallery__track { --per-view: 4; }
 }
 @media (max-width: 760px) {
-  .gallery__track { --per-view: 2.3; --gap: 12px; }
+  .gallery__track { --per-view: 3; --gap: 10px; }
 }
-@media (max-width: 420px) {
-  .gallery__track { --per-view: 1.6; }
+@media (max-width: 460px) {
+  .gallery__track { --per-view: 2.4; --gap: 8px; }
 }
 .gallery__tile {
   scroll-snap-align: start;
@@ -269,7 +272,7 @@
   background: var(--color-neutral-200);
   box-shadow: var(--shadow-sm);
   cursor: zoom-in;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 1 / 1;
 }
 .gallery__tile img {
   width: 100%;
@@ -348,23 +351,8 @@
   border-radius: var(--radius-md);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
 }
-.lightbox__figure figcaption {
-  font-size: 14px;
-  line-height: 1.5;
-  color: #efe8d8;
-  text-align: center;
-  max-width: 60ch;
-}
 .lightbox__prev { grid-column: 1; grid-row: 2; }
 .lightbox__next { grid-column: 3; grid-row: 2; }
-.lightbox__count {
-  grid-column: 2;
-  grid-row: 3;
-  justify-self: center;
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  color: #cfc6b2;
-}
 @media (max-width: 600px) {
   /* Arrows under the photo on a phone, where the sides have no room. */
   .lightbox {
@@ -373,7 +361,6 @@
   .lightbox__figure { grid-column: 1 / -1; }
   .lightbox__prev { grid-row: 3; grid-column: 1; justify-self: start; }
   .lightbox__next { grid-row: 3; grid-column: 3; justify-self: end; }
-  .lightbox__count { grid-column: 2; }
 }
 
 /* No dot in the edition badge on a phone: there the words take two lines, and
@@ -583,5 +570,80 @@ section[id] {
     width: auto !important;
     max-width: 100%;
     max-height: calc(100svh - var(--header-h) - 10svh);
+  }
+}
+
+
+/* ── receive a letter: where, then plan (a phone) ──────────────────────── */
+
+/* The first part of the form is two screens on a phone — where it is going,
+ * then which plan — and one on a desktop, where both fit. Marked in
+ * SubscribeForm.jsx: .sub-where and .sub-plan are the two halves,
+ * .sub-mobile-only is for what only the split needs (the extra Next, Back and
+ * the plan heading). */
+@media (min-width: 901px) {
+  .sub-mobile-only { display: none !important; }
+}
+@media (max-width: 900px) {
+  .sub-part[data-sub="where"] .sub-plan { display: none !important; }
+  .sub-part[data-sub="plan"] .sub-where { display: none !important; }
+}
+
+
+/* ── a phone: less scrolling ───────────────────────────────────────────── */
+
+/* The sections each took a screen or more on a phone. Tighter space between
+ * them, a smaller Iris and envelope photo, and the nine pieces of the envelope
+ * in a row you swipe instead of a column of two. Desktop is untouched. */
+@media (max-width: 720px) {
+  .envelope-grid {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    /* Runs to the screen's edges so the next piece peeks in from the side. */
+    margin-left: calc(-1 * clamp(20px, 5vw, 44px));
+    margin-right: calc(-1 * clamp(20px, 5vw, 44px));
+    padding: 6px clamp(20px, 5vw, 44px) 16px;
+    scroll-padding-left: clamp(20px, 5vw, 44px);
+  }
+  .envelope-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .envelope-grid > * {
+    flex: 0 0 min(72%, 270px);
+    scroll-snap-align: start;
+  }
+  .inside__art {
+    max-height: 190px !important;
+  }
+}
+@media (max-width: 600px) {
+  .meet,
+  .inside,
+  .owner-gallery {
+    padding-top: 40px !important;
+    padding-bottom: 40px !important;
+  }
+  .subscribe {
+    padding-top: 28px !important;
+    padding-bottom: 36px !important;
+  }
+  .meet__art {
+    width: min(230px, 62%) !important;
+  }
+  .meet .meet__panel {
+    padding: 20px 18px;
+  }
+  .hero {
+    padding-bottom: 36px;
+  }
+  .hero__art {
+    margin-bottom: 18px;
+  }
+  .hero__art img {
+    height: clamp(150px, 26svh, 220px);
   }
 }

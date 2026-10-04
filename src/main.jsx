@@ -10,10 +10,12 @@ import "./site.css";
 import { warmUp } from "./api.js";
 import useConfig from "./useConfig.js";
 import { applyTheme, rememberedTheme, useSiteTheme } from "./theme.js";
+import { design } from "./content/index.js";
 
-/* The colours chosen in the panel, applied before the first paint from the
- * last visit, then confirmed from /api/config. */
-applyTheme(rememberedTheme());
+/* The colours chosen in the panel, applied before the first paint: the
+ * published ones (content/design.js) if the panel has written them, otherwise
+ * from the last visit and then confirmed from /api/config. */
+applyTheme(design.published ? design.theme : rememberedTheme());
 import { usePath, useScrollOnNavigate, interceptLinks } from "./router.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
 import RedRace from "./RedRace.jsx";
@@ -66,7 +68,7 @@ const routeFor = (path) => {
  * before sign-in. */
 function SiteTheme() {
   const { config } = useConfig();
-  useSiteTheme(config);
+  useSiteTheme(design.published ? null : config);
   return null;
 }
 

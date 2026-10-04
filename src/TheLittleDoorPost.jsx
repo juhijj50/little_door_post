@@ -12,9 +12,12 @@
  *    gallery   →  photographs of real post going out
  *    subscribe →  SubscribeForm, which owns the whole sign-up
  *
- *  The edition, the envelope's contents and photograph, and the gallery all
- *  come from /api/config and are edited from the admin panel. The lists below
- *  are only what shows if the API cannot be reached at all.
+ *  The edition, the envelope's contents and photograph, the gallery, the
+ *  pictures and the prices are the site's own files (src/content, public/media),
+ *  rewritten from the admin panel through the GitHub API — so they are on screen
+ *  from the first paint, with no wait on a sleeping server. Until the panel has
+ *  published once, each falls back to /api/config as before; the lists below are
+ *  only what shows if that cannot be reached either.
  *
  *  Styling is inline through css() as before; the parts that need media
  *  queries (the header menu, the envelope grid, the gallery) are in site.css.
@@ -22,7 +25,8 @@
 import React, { useEffect, useState } from "react";
 import { css } from "./css.js";
 import { mediaUrl } from "./api.js";
-import useConfig from "./useConfig.js";
+import useConfig, { useEdition } from "./useConfig.js";
+import { envelope, images } from "./content/index.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 import GlobalWaitlist from "./GlobalWaitlist.jsx";
@@ -56,7 +60,7 @@ const GALLERY_FALLBACK = [
 const NAV = [
   ["#meet", "Meet Iris"],
   ["#inside", "What's inside"],
-  ["#gallery", "Gallery"],
+  ["#gallery", "Owner’s gallery"],
   ["/red-race", "Read Door 1"],
 ];
 
@@ -210,13 +214,15 @@ function useSiteImages(config, failed) {
   const [remembered] = useState(rememberedSiteImages);
   const live = config?.siteImages;
   useEffect(() => {
-    if (!live) return;
+    if (!live || images.published) return;
     try {
       window.localStorage.setItem(SITE_IMAGES_KEY, JSON.stringify(live));
     } catch {
       /* Private mode — it simply is not remembered. */
     }
   }, [live]);
+  /* Published into the site's own files: known at once, nothing to remember. */
+  if (images.published) return images;
   if (live) return live;
   if (failed) return {};
   return remembered; // null: not known yet
@@ -227,10 +233,12 @@ const DEFAULT_SUBSCRIBE_BG = "/assets/gallery-green-seals.webp";
 
 export default function TheLittleDoorPost() {
   const { config, failed } = useConfig();
-  const edition = config?.edition;
+  const edition = useEdition();
   const site = useSiteImages(config, failed);
-  const heroSrc = site ? mediaUrl(site.hero) || DEFAULT_HERO : null;
-  const meetBg = site ? mediaUrl(site.meet) : null;
+  /* Published pictures are paths on this site; the API's are on the API. */
+  const pic = (path) => (images.published ? path || null : mediaUrl(path));
+  const heroSrc = site ? pic(site.hero) || DEFAULT_HERO : null;
+  const meetBg = site ? pic(site.meet) : null;
 
   /* Meet Iris's words sit on a pane of glass, so they read over any picture:
    * white words on smoked glass, or black words on frosted glass — chosen in
@@ -254,12 +262,20 @@ export default function TheLittleDoorPost() {
       transform: f.zoom > 100 ? `scale(${f.zoom / 100})` : undefined,
     };
   };
-  const subscribeBg = site ? mediaUrl(site.subscribe) || DEFAULT_SUBSCRIBE_BG : null;
+  const subscribeBg = site ? pic(site.subscribe) || DEFAULT_SUBSCRIBE_BG : null;
 
-  const items = config?.envelope?.items?.length ? config.envelope.items : ENVELOPE_FALLBACK;
-  const envelopeImage = mediaUrl(config?.envelope?.image) || "/assets/envelope-white.webp";
+  const items = envelope.published && envelope.items.length
+    ? envelope.items
+    : config?.envelope?.items?.length
+    ? config.envelope.items
+    : ENVELOPE_FALLBACK;
+  const envelopeImage = envelope.published
+    ? envelope.image || "/assets/envelope-white.webp"
+    : mediaUrl(config?.envelope?.image) || "/assets/envelope-white.webp";
 
-  const photos = config
+  const photos = images.published
+    ? images.gallery
+    : config
     ? (config.gallery || []).map((g) => ({ src: mediaUrl(g.url), caption: g.caption }))
     : failed
     ? GALLERY_FALLBACK
@@ -456,7 +472,7 @@ export default function TheLittleDoorPost() {
       </section>
 
       {/* ── what's inside ──────────────────────────────────────────────── */}
-      <section id="inside" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
+      <section id="inside" className="inside" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
         <div style={css("width:min(1180px,100%);margin:0 auto")}>
           <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(24px,4.5vw,56px);align-items:center")}>
             <div>
@@ -474,6 +490,7 @@ export default function TheLittleDoorPost() {
             <div style={css("display:flex;justify-content:center")}>
               <img
                 key={envelopeImage}
+                className="inside__art"
                 src={envelopeImage}
                 alt={edition ? `The ${edition.name} envelope` : "This month's envelope"}
                 style={css(
@@ -517,23 +534,15 @@ export default function TheLittleDoorPost() {
         </div>
       </section>
 
-      {/* ── the photographs ────────────────────────────────────────────── */}
-      <section id="gallery" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(16px,5vw,44px)")}>
-        <div style={css("width:min(1180px,100%);margin:0 auto")}>
-          <div style={css("max-width:52ch;margin-bottom:clamp(18px,3vh,28px)")}>
-            <div style={kicker}>
-              <span style={rule} />
-              Photographed at the desk
-            </div>
-            <h2 style={h2}>The post, as it really looks</h2>
-            <p style={lede}>
-              Envelopes printed, sealed and addressed by hand, and the paper that goes inside them.
-              Tap any photograph to see it full size.
-            </p>
+      {/* ── the owner's gallery: photographs only ──────────────────────── */}
+      {(images.published ? images.gallery.length > 0 : true) && (
+        <section id="gallery" className="owner-gallery" style={css("position:relative;padding:clamp(40px,8vh,104px) clamp(16px,5vw,44px)")}>
+          <div style={css("width:min(1180px,100%);margin:0 auto")}>
+            <h2 style={{ ...h2, margin: "0 0 clamp(16px,3vh,28px)" }}>Owner&rsquo;s gallery</h2>
+            <Gallery photos={photos} pending={!images.published && !config && !failed} />
           </div>
-          <Gallery photos={photos} pending={!config && !failed} />
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ── sign up ────────────────────────────────────────────────────── */}
       <section id="subscribe" className="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>

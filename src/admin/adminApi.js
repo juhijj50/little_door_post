@@ -142,6 +142,11 @@ export const setSiteImage = (slot, media_id, text_tone, frame) =>
 /* The colour palettes of the buttons and the headings, by name. */
 export const setTheme = (theme) => call("/admin/theme", { method: "PUT", json: theme });
 
+/* The site's own files: where the last publish got to, and "send it now".
+ * Saves schedule a publish on the server by themselves. */
+export const getPublish = () => call("/admin/publish");
+export const publishNow = () => call("/admin/publish", { method: "POST" });
+
 export const deleteMedia = (id) => call(`/admin/media/${id}`, { method: "DELETE" });
 
 /* ── photographs ─────────────────────────────────────────────────────────── */

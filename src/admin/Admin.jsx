@@ -11,6 +11,10 @@
  *    Prices    the rate card
  *    Account   change the password, sign out
  *
+ *  Saving anything the site shows also publishes it: the server rewrites the
+ *  site's own files through the GitHub API a few seconds later, and the host
+ *  rebuilds from that. The bar under the tabs says where that has got to.
+ *
  *  Loaded only when /admin is visited (see main.jsx), so none of this is in
  *  the bundle a reader downloads.
  */
@@ -23,8 +27,10 @@ import {
   deleteMedia,
   downloadExport,
   getOverview,
+  getPublish,
   getSession,
   listSubscriptions,
+  publishNow,
   saveContents,
   setEdition,
   setPlan,
@@ -328,7 +334,7 @@ function EnvelopeTab({ data, reload }) {
       setMsg({ tone: "error", text: "Every piece needs a name." });
       return;
     }
-    const done = await run(() => saveContents(cycle, clean, imageId), `Saved. The ${monthName(cycle)} envelope is up to date.`);
+    const done = await run(() => saveContents(cycle, clean, imageId), `Saved. The ${monthName(cycle)} envelope reaches the site in about a minute.`);
     if (done) reload();
   };
 
@@ -435,7 +441,7 @@ function GalleryTab({ data, reload }) {
     setCaption("");
     setMsg(failed.length
       ? { tone: "error", text: `${done} uploaded. Not uploaded — ${failed.join("; ")}` }
-      : { tone: "ok", text: `${done} photo${done === 1 ? "" : "s"} added. They are on the site now.` });
+      : { tone: "ok", text: `${done} photo${done === 1 ? "" : "s"} added. They reach the site in about a minute.` });
     reload();
   };
 
@@ -603,7 +609,7 @@ function SiteImageCard({ def, current, tone, savedFrame, reload }) {
     const done = await run(async () => {
       const row = await uploadImage(file, { kind: "site" });
       return setSiteImage(def.slot, row.id);
-    }, "Saved — it is on the site now. Drag it or use the sliders to frame it.");
+    }, "Saved — it reaches the site in about a minute. Drag it or use the sliders to frame it.");
     if (done) reload();
   };
 
@@ -623,7 +629,7 @@ function SiteImageCard({ def, current, tone, savedFrame, reload }) {
 
   const setTone = async (next) => {
     const done = await run(() => setSiteImage(def.slot, undefined, next),
-      `Words are now ${next === "dark" ? "black" : "white"} on the site.`);
+      `Words will be ${next === "dark" ? "black" : "white"} on the site in about a minute.`);
     if (done) reload();
   };
 
@@ -929,7 +935,7 @@ function ColoursCard({ theme, reload }) {
 
   const save = async () => {
     const body = Object.fromEntries(COLOUR_PARTS.map(({ key }) => [key, asChoice(key)]));
-    const done = await run(() => setTheme(body), "Saved — the site uses these colours now.");
+    const done = await run(() => setTheme(body), "Saved — the site uses these colours in about a minute.");
     if (done) reload();
   };
 
@@ -1327,6 +1333,65 @@ function AccountTab({ data, onOut }) {
   );
 }
 
+/* ── the site's own files ──────────────────────────────────────────────── */
+
+/* Where the last publish got to. A save in any tab schedules one on the
+ * server; this watches it (and polls while one is due), and offers to send
+ * everything right now — also how a first publish, or a failed one, is done. */
+function PublishBar({ data }) {
+  const [st, setSt] = useState(data?.publish);
+  const { busy, run, msg } = useAction();
+
+  useEffect(() => { setSt(data?.publish); }, [data]);
+
+  const waiting = Boolean(st && (st.pending || st.state === "publishing"));
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const timer = setInterval(async () => {
+      try { setSt(await getPublish()); } catch { /* try again next tick */ }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [waiting]);
+
+  const send = async () => {
+    const next = await run(() => publishNow());
+    if (next) setSt(next);
+    else getPublish().then(setSt).catch(() => {});
+  };
+
+  if (!st) return null;
+
+  if (!st.configured) {
+    return (
+      <div className="adm-msg adm-msg--error" role="status">
+        <strong>The site is not being updated.</strong> Changes are saved here, but the server has no
+        GITHUB_TOKEN, so nothing reaches the site. Add it in Render&rsquo;s environment — the steps are in
+        backend/.env.example.
+      </div>
+    );
+  }
+
+  const failed = st.state === "error";
+  return (
+    <div className={`adm-msg adm-msg--${failed ? "error" : "ok"}`} role="status"
+      style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, justifyContent: "space-between" }}>
+      <span>
+        {waiting
+          ? "Sending your changes to the site…"
+          : failed
+          ? <><strong>The site was not updated.</strong> {st.error}</>
+          : st.state === "ok"
+          ? <>{st.message}{st.url && <> <a href={st.url} target="_blank" rel="noreferrer">Commit {st.commit}</a>.</>}</>
+          : "Changes you save here are sent to the site automatically."}
+        {msg && msg.tone === "error" && !failed && <> {msg.text}</>}
+      </span>
+      <button className="adm-btn adm-btn--small" disabled={busy || waiting} onClick={send}>
+        {busy ? "Sending…" : failed ? "Try again" : "Publish now"}
+      </button>
+    </div>
+  );
+}
+
 /* ── the panel ─────────────────────────────────────────────────────────── */
 
 const TABS = [
@@ -1380,6 +1445,7 @@ function Dashboard({ onOut }) {
         </nav>
       </header>
       <main className="adm-main">
+        {data && <PublishBar data={data} />}
         {error && <div className="adm-msg adm-msg--error">{error} <button className="adm-btn adm-btn--small" onClick={reload}>Try again</button></div>}
         {!data && !error && <div className="adm-card"><p className="adm-help" style={{ margin: 0 }}>Loading… the server may take up to a minute to wake.</p></div>}
         {data && tab === "edition" && <EditionTab {...props} />}
