@@ -24,7 +24,7 @@
  *  with a payment block whose `enabled` flag decides between a pay button and a
  *  "not live yet" notice.
  */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { css } from "./css.js";
 import { createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
 import { business } from "./business.js";
@@ -539,6 +539,33 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
     if (worthSaving(values)) writeDraft(values, part);
   }, [values, part, stage]);
 
+  /* Keep the card in view when what is on it changes.
+   *
+   * Each screen replaces the last in the same card, and they are different
+   * heights — the address form is long, the payment panel after "Seal the
+   * envelope" is short. The page gets shorter under a reader who has scrolled
+   * down to the button, and without this they are left looking at whatever
+   * section comes next, and have to scroll back up to find where to pay. So
+   * whenever the screen changes and the top of the section is no longer in
+   * view, bring it back. Only when the screen has actually changed — never on
+   * the first render, which is just the page loading. */
+  const screen = `${stage}/${part}/${pick}`;
+  const lastScreen = useRef(screen);
+  useEffect(() => {
+    if (lastScreen.current === screen) return;
+    lastScreen.current = screen;
+    const section = document.getElementById("subscribe");
+    if (!section) return;
+    /* On a desktop the form scrolls inside the card; start the new screen at
+     * its top there too. */
+    const inner = section.querySelector(".subscribe__form");
+    if (inner) inner.scrollTop = 0;
+    const { top } = section.getBoundingClientRect();
+    if (top < 0 || top > window.innerHeight * 0.6) {
+      section.scrollIntoView({ block: "start" });
+    }
+  }, [screen]);
+
   const set = useCallback((name, value) => {
     setValues((v) => ({ ...v, [name]: value }));
     setFieldErrs((e) => (e[name] ? { ...e, [name]: undefined } : e));
@@ -931,7 +958,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
         </div>
 
         <button className="btn btn-secondary" type="button" onClick={startOver} style={css("margin-top:var(--space-4)")}>
-          Subscribe someone else
+          Subscribe for someone else as a gift
         </button>
       </div>
     );
