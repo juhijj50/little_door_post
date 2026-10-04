@@ -287,7 +287,7 @@ function EnvelopeTab({ data, reload }) {
    * so the list can be ready before it goes on sale. */
   const choices = [...editions];
   if (!choices.some((e) => e.cycle === edition.next.cycle)) {
-    choices.unshift({ cycle: edition.next.cycle, name: edition.next.name, items: edition.items, envelope_media_id: null, envelope_image: null });
+    choices.unshift({ cycle: edition.next.cycle, name: edition.next.name, items: edition.items, envelope_media_id: null, envelope_image: null, giveaway_code: null });
   }
   const [cycle, setCycle] = useState(edition.cycle);
   const chosen = choices.find((e) => e.cycle === cycle) || edition;
@@ -295,6 +295,7 @@ function EnvelopeTab({ data, reload }) {
   const [items, setItems] = useState(chosen.items);
   const [imageId, setImageId] = useState(chosen.envelope_media_id);
   const [imageUrl, setImageUrl] = useState(chosen.envelope_image);
+  const [code, setCode] = useState(chosen.giveaway_code || "");
   const { busy, msg, setMsg, run } = useAction();
   const upload = useAction();
   const fileRef = useRef(null);
@@ -303,6 +304,7 @@ function EnvelopeTab({ data, reload }) {
     setItems(chosen.items);
     setImageId(chosen.envelope_media_id);
     setImageUrl(chosen.envelope_image);
+    setCode(chosen.giveaway_code || "");
     setMsg(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cycle]);
@@ -334,7 +336,7 @@ function EnvelopeTab({ data, reload }) {
       setMsg({ tone: "error", text: "Every piece needs a name." });
       return;
     }
-    const done = await run(() => saveContents(cycle, clean, imageId), `Saved. The ${monthName(cycle)} envelope reaches the site in about a minute.`);
+    const done = await run(() => saveContents(cycle, clean, imageId, code.trim()), `Saved. The ${monthName(cycle)} envelope reaches the site in about a minute.`);
     if (done) reload();
   };
 
@@ -399,6 +401,17 @@ function EnvelopeTab({ data, reload }) {
           </div>
           <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={onPhoto} />
           <div style={{ marginTop: 10 }}><Msg msg={upload.msg} /></div>
+
+          <div style={{ marginTop: 18 }}>
+            <label className="adm-label" htmlFor="adm-giveaway">Giveaway code for {monthName(cycle)}</label>
+            <input id="adm-giveaway" className="adm-input" maxLength={32} placeholder="None — no giveaway this month"
+              value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/\s/g, ""))} />
+            <p className="adm-help" style={{ marginBottom: 0 }}>
+              Anyone who types this in &ldquo;Have a code?&rdquo; while {monthName(cycle)} is on sale gets
+              that month&rsquo;s envelope free (a longer plan pays for the other months). Letters,
+              numbers, _ and - only. Clear it and save to stop the giveaway. Saved with the button below.
+            </p>
+          </div>
         </div>
       </div>
 

@@ -109,8 +109,11 @@ export const setEdition = (cycle, status) =>
 
 export const undoCount = (cycle) => call(`/admin/editions/${cycle}/undo`, { method: "POST" });
 
-export const saveContents = (cycle, items, envelope_media_id) =>
-  call(`/admin/editions/${cycle}`, { method: "PUT", json: { items, envelope_media_id } });
+export const saveContents = (cycle, items, envelope_media_id, giveaway_code) =>
+  call(`/admin/editions/${cycle}`, {
+    method: "PUT",
+    json: { items, envelope_media_id, giveaway_code: giveaway_code || null },
+  });
 
 export const listSubscriptions = (params = {}) => {
   const query = new URLSearchParams(

@@ -661,6 +661,22 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
       const result = await createSubscription(payload);
       setSubscription(result.subscription);
       setPayment(result.payment);
+      /* A giveaway code on a one-month plan: nothing to pay, so the server
+       * has already confirmed it and there is no checkout to open. */
+      if (!result.payment && result.subscription?.status === "active") {
+        const record = {
+          free: true,
+          reference: result.subscription.reference,
+          months: result.subscription.plan_months,
+          cycle: result.subscription.cycle,
+        };
+        writeDone(record);
+        setDone(record);
+        clearDraft();
+        setStage("sealed");
+        onSealed?.();
+        return;
+      }
       setStage("pay");
     } catch (err) {
       setFieldErrs(err.fields || {});
@@ -893,10 +909,10 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           >
             &#10003;
           </span>
-          <div style={heading}>Payment done</div>
+          <div style={heading}>{paid.free ? "You’re in" : "Payment done"}</div>
         </div>
         <p style={css("font-size:15px;line-height:1.7;margin:var(--space-3) 0")}>
-          {paid.amount ? <><strong>{paid.amount}</strong> paid for </> : "Paid for "}
+          {paid.free ? "Nothing to pay for " : paid.amount ? <><strong>{paid.amount}</strong> paid for </> : "Paid for "}
           {paid.months} {paid.months === 1 ? "month" : "months"}. Your first letter goes out with the{" "}
           {monthName(paid.cycle)} edition.
         </p>
