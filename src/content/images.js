@@ -25,6 +25,14 @@ export default {
   },
   "gallery": [
     {
+      "src": "/media/843e11fa-436d-4736-9b22-0619b068133e.webp",
+      "caption": ""
+    },
+    {
+      "src": "/media/deba73f8-db4d-463f-803f-45577a4f23e3.webp",
+      "caption": ""
+    },
+    {
       "src": "/media/2c03a317-3d48-43d1-b4f6-14f27e13d170.webp",
       "caption": ""
     },
