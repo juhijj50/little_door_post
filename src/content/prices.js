@@ -1,9 +1,43 @@
 /* Written by the admin panel's publish step - do not edit by hand; the next
- * publish would overwrite it. Change this in the panel instead.
- *
- * Until the first publish this holds nothing (published: false), and the page
- * reads this part from the API as it always did. */
+ * publish would overwrite it. Change this in the panel instead. */
 export default {
-  "published": false,
-  "plans": { "india": [], "international": [] }
+  "published": true,
+  "plans": {
+    "india": [
+      {
+        "months": 1,
+        "currency": "INR",
+        "rateMinor": 54900,
+        "rateDisplay": "₹549",
+        "totalMinor": 54900,
+        "totalDisplay": "₹549"
+      },
+      {
+        "months": 3,
+        "currency": "INR",
+        "rateMinor": 50000,
+        "rateDisplay": "₹500",
+        "totalMinor": 150000,
+        "totalDisplay": "₹1,500"
+      },
+      {
+        "months": 12,
+        "currency": "INR",
+        "rateMinor": 45000,
+        "rateDisplay": "₹450",
+        "totalMinor": 540000,
+        "totalDisplay": "₹5,400"
+      }
+    ],
+    "international": [
+      {
+        "months": 1,
+        "currency": "USD",
+        "rateMinor": 1300,
+        "rateDisplay": "$13",
+        "totalMinor": 1300,
+        "totalDisplay": "$13"
+      }
+    ]
+  }
 };

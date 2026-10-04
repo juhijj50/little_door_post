@@ -1,9 +1,11 @@
 /* Written by the admin panel's publish step - do not edit by hand; the next
- * publish would overwrite it. Change this in the panel instead.
- *
- * Until the first publish this holds nothing (published: false), and the page
- * reads this part from the API as it always did. */
+ * publish would overwrite it. Change this in the panel instead. */
 export default {
-  "published": false,
-  "theme": null
+  "published": true,
+  "theme": {
+    "buttons": "#4e5e27",
+    "headings": "sage",
+    "form": "#debb95",
+    "numbers": "#e7c642"
+  }
 };
