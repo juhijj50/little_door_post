@@ -21,12 +21,12 @@ export default {
         "totalDisplay": "₹1,500"
       },
       {
-        "months": 12,
+        "months": 6,
         "currency": "INR",
         "rateMinor": 45000,
         "rateDisplay": "₹450",
-        "totalMinor": 540000,
-        "totalDisplay": "₹5,400"
+        "totalMinor": 270000,
+        "totalDisplay": "₹2,700"
       }
     ],
     "international": [
