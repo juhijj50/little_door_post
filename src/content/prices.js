@@ -7,18 +7,18 @@ export default {
       {
         "months": 1,
         "currency": "INR",
-        "rateMinor": 54900,
-        "rateDisplay": "₹549",
-        "totalMinor": 54900,
-        "totalDisplay": "₹549"
+        "rateMinor": 50000,
+        "rateDisplay": "₹500",
+        "totalMinor": 50000,
+        "totalDisplay": "₹500"
       },
       {
         "months": 3,
         "currency": "INR",
-        "rateMinor": 50000,
-        "rateDisplay": "₹500",
-        "totalMinor": 150000,
-        "totalDisplay": "₹1,500"
+        "rateMinor": 47500,
+        "rateDisplay": "₹475",
+        "totalMinor": 142500,
+        "totalDisplay": "₹1,425"
       },
       {
         "months": 6,
