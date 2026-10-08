@@ -4,7 +4,7 @@ export default {
   "published": true,
   "hero": "/media/26846ec3-7d93-4618-832f-8bfc583949e4.webp",
   "meet": "/media/4e167512-13a6-4a48-9063-52aac2881ae0.webp",
-  "subscribe": "/media/a5fa463e-327d-41b8-9dee-6086801e75da.webp",
+  "subscribe": "/media/78a459a4-187d-4f55-a762-e17e8edd79c6.webp",
   "meetText": "dark",
   "frames": {
     "hero": {
