@@ -26,7 +26,7 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { css } from "./css.js";
-import { createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
+import { createOrder, createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
 import { business } from "./business.js";
 import useConfig, { useEdition, usePlans } from "./useConfig.js";
 
@@ -720,14 +720,27 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
     setBusy(true);
     setFormError("");
     try {
+      /* Asked afresh on every press, never taken from what the page has held
+       * since the form was sent. An unpaid sign-up is deleted after 24 hours,
+       * and a tab left open overnight must not be able to pay for one that is
+       * gone: the server refuses it here, before any money moves. */
+      const fresh = await createOrder(subscription.id);
+      setPayment(fresh);
+      if (!fresh.enabled) {
+        setBusy(false);
+        return;
+      }
       const Razorpay = await loadRazorpayCheckout();
       const checkout = new Razorpay({
-        key: payment.key_id,
-        order_id: payment.order_id,
+        key: fresh.key_id,
+        order_id: fresh.order_id,
         /* Already in paise — the unit both our plans table and Razorpay use,
          * so it is passed straight through with no arithmetic. */
-        amount: payment.amount_minor,
-        currency: payment.currency || "INR",
+        amount: fresh.amount_minor,
+        currency: fresh.currency || "INR",
+        /* Seconds. Checkout closes itself after this, so a payment can only
+         * finish well inside the 24 hours its sign-up is kept for. */
+        timeout: 900,
         name: "The Little Door Post",
         description: `${subscription.plan_months} ${
           subscription.plan_months === 1 ? "month" : "months"
