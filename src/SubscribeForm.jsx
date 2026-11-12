@@ -782,7 +782,26 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
             setStage("sealed");
             onSealed?.();
           } catch (err) {
-            setFormError(err.message);
+            /* Razorpay only calls this handler once the payment has actually
+             * succeeded, so the money has moved by the time we are here. If our
+             * own confirmation could not be reached — a server still waking, a
+             * dropped connection, or the webhook having credited it first — the
+             * payment is recorded server to server regardless. So this is never
+             * a failure to put in front of the reader: show the confirmation,
+             * and note the subscription is being finalised. */
+            const record = {
+              paymentId: response.razorpay_payment_id,
+              reference: subscription.reference,
+              amount: subscription.amount_display,
+              months: subscription.plan_months,
+              cycle: subscription.cycle,
+              unconfirmed: true,
+            };
+            writeDone(record);
+            setDone(record);
+            clearDraft();
+            setStage("sealed");
+            onSealed?.();
           } finally {
             setBusy(false);
           }
@@ -956,6 +975,13 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
           {paid.months} {paid.months === 1 ? "month" : "months"}. Your first letter goes out with the{" "}
           {monthName(paid.cycle)} edition.
         </p>
+
+        {paid.unconfirmed && (
+          <p style={css("margin:0 0 var(--space-3);font-size:13px;line-height:1.7;color:var(--color-neutral-700)")}>
+            We&rsquo;re finalising your subscription and emailing your receipt. If anything looks amiss,
+            quote the reference below when you write to us.
+          </p>
+        )}
 
         <div style={css("display:flex;flex-direction:column;gap:var(--space-2)")}>
           <IdRow
