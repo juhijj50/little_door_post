@@ -5,8 +5,8 @@ export default {
   "edition": {
     "cycle": "2026-11",
     "name": "November 2026",
-    "status": "open",
-    "open": true,
+    "status": "sold_out",
+    "open": false,
     "next": {
       "cycle": "2026-12",
       "name": "December 2026"
