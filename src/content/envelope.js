@@ -14,44 +14,44 @@ export default {
   },
   "items": [
     {
-      "title": "Art themed envelope",
-      "detail": "Envelope depicting the art of that corner of the world."
-    },
-    {
       "title": "Letter from Iris",
-      "detail": "A printed pages from the corner of the world she opens the door to this month."
+      "detail": "A printed page from the corner of the world she opens the door to this month."
     },
     {
-      "title": "Zine",
-      "detail": "A zine with 6 pages about the history, the architecture, the people, etc. of that place."
+      "title": "Everything Inside Card",
+      "detail": "A card explaining everything inside the envelope."
     },
     {
-      "title": "Stamp",
-      "detail": "An actual stamp of the place."
+      "title": "Arctic Coal Company Card",
+      "detail": "A commemorative card celebrating Longyearbyen's coal mining heritage."
     },
     {
       "title": "Postcard",
       "detail": "A small illustrated print on a postcard card, drawn from that month's place."
     },
     {
-      "title": "Hamsa Hand Charm",
-      "detail": "A silver plated Hamsa Hand Charm."
+      "title": "Seed Packet",
+      "detail": "A seed packed resembling the Seed Vault."
     },
     {
-      "title": "DIY Bookmark",
-      "detail": "Bookmark with the art print of the place along with mirrors to decorate it."
+      "title": "Bookmark",
+      "detail": "Bookmark with the Scandinavian art print."
     },
     {
-      "title": "Sticker",
-      "detail": "A die-cut sticker of that month's corner of the world."
+      "title": "Stickers",
+      "detail": "2 die-cut sticker of that month's corner of the world."
     },
     {
       "title": "Journaling stamps",
       "detail": "Journaling stamps related to that corner of the world."
     },
     {
-      "title": "Photocard",
-      "detail": "A photo of the place shared by a friend."
+      "title": "Recipe Card",
+      "detail": "A recipe right from Longyearbyen."
+    },
+    {
+      "title": "Christmas Card",
+      "detail": "A greeting card made for Christmas."
     }
   ],
   "image": null
