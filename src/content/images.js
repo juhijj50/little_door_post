@@ -3,7 +3,7 @@
 export default {
   "published": true,
   "hero": "/media/058e179d-9695-4924-8ce5-0d6d3050bab5.webp",
-  "meet": null,
+  "meet": "/media/a585ecf7-2559-4c2a-be31-9371b8b795ed.webp",
   "subscribe": "/media/9c219af8-89a2-4b36-901c-8250bf25c1e3.webp",
   "meetText": "dark",
   "frames": {
