@@ -2,7 +2,7 @@
  * publish would overwrite it. Change this in the panel instead. */
 export default {
   "published": true,
-  "hero": "/media/26846ec3-7d93-4618-832f-8bfc583949e4.webp",
+  "hero": "/media/3e4e518d-1a5d-468e-84b6-dd8f7edcf99e.webp",
   "meet": "/media/4e167512-13a6-4a48-9063-52aac2881ae0.webp",
   "subscribe": "/media/78a459a4-187d-4f55-a762-e17e8edd79c6.webp",
   "meetText": "dark",
