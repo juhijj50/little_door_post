@@ -25,6 +25,26 @@ export default {
   },
   "gallery": [
     {
+      "src": "/media/21b7e7b7-ee57-4a1e-9c07-713629d1d25c.webp",
+      "caption": ""
+    },
+    {
+      "src": "/media/5dc005e6-e6de-42bc-8467-e825753f449c.webp",
+      "caption": ""
+    },
+    {
+      "src": "/media/3c8999ea-e25b-4e30-a8cd-84054d84a129.webp",
+      "caption": ""
+    },
+    {
+      "src": "/media/d0b3b962-ac92-4bde-a3d3-67a73b10359f.webp",
+      "caption": ""
+    },
+    {
+      "src": "/media/9d8ea74a-ba20-4a9c-8cc4-7a5fe11581b0.webp",
+      "caption": ""
+    },
+    {
       "src": "/media/843e11fa-436d-4736-9b22-0619b068133e.webp",
       "caption": ""
     },
