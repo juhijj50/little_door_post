@@ -3,13 +3,13 @@
 export default {
   "published": true,
   "edition": {
-    "cycle": "2026-11",
-    "name": "November 2026",
-    "status": "sold_out",
-    "open": false,
+    "cycle": "2026-12",
+    "name": "December 2026",
+    "status": "open",
+    "open": true,
     "next": {
-      "cycle": "2026-12",
-      "name": "December 2026"
+      "cycle": "2027-01",
+      "name": "January 2027"
     }
   },
   "items": [
@@ -54,5 +54,5 @@ export default {
       "detail": "A photo of the place shared by a friend."
     }
   ],
-  "image": "/media/b8e45ae3-ced7-4033-943d-9d6f21bf9582.webp"
+  "image": null
 };
