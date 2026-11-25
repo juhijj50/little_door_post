@@ -54,5 +54,5 @@ export default {
       "detail": "A greeting card made for Christmas."
     }
   ],
-  "image": null
+  "image": "/media/b3584d14-7c1a-480a-99db-ac1033e28c47.webp"
 };
