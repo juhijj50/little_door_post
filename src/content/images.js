@@ -8,7 +8,7 @@ export default {
   "meetText": "dark",
   "frames": {
     "hero": {
-      "x": 50,
+      "x": 52,
       "y": 50,
       "zoom": 100
     },

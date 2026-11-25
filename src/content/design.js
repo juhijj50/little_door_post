@@ -5,7 +5,7 @@ export default {
   "theme": {
     "buttons": "#4e5e27",
     "headings": "sage",
-    "form": "#debb95",
-    "numbers": "#e7c642"
+    "form": "#95b1de",
+    "numbers": "#4287e7"
   }
 };
