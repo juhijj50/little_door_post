@@ -11,6 +11,7 @@ import React from "react";
 import { css } from "../css.js";
 import { business, isTodo } from "../business.js";
 import SiteFooter, { POLICIES } from "../SiteFooter.jsx";
+import SiteNav from "../SiteNav.jsx";
 
 const PROSE = `
   .ldp-prose { font-size: 16px; line-height: 1.85; }
@@ -136,39 +137,6 @@ export const Rows = ({ items }) => (
   </table>
 );
 
-const Header = () => (
-  <header
-    style={css(
-      "position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:clamp(14px,3vw,30px);padding:11px clamp(16px,4vw,44px);background:color-mix(in srgb, var(--color-bg) 92%, transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--color-divider)"
-    )}
-  >
-    <a
-      href="/"
-      style={css(
-        "display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none;color:var(--color-text)"
-      )}
-    >
-      <img
-        src="/assets/logo.webp"
-        alt=""
-        style={css(
-          "width:clamp(30px,6vw,38px);height:clamp(30px,6vw,38px);border-radius:50%;object-fit:cover;flex:none"
-        )}
-      />
-      <span
-        style={css(
-          "font-family:var(--font-heading);font-size:clamp(15px,3.4vw,19px);letter-spacing:.02em;white-space:nowrap"
-        )}
-      >
-        The Little Door Post
-      </span>
-    </a>
-    <a className="btn btn-primary" href="/#subscribe" style={css("white-space:nowrap")}>
-      Receive a letter
-    </a>
-  </header>
-);
-
 /*  One policy page.
  *
  *  `title`    the page's own name
@@ -186,7 +154,7 @@ export default function LegalPage({ title, summary, path, children }) {
           "background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);min-height:100vh;display:flex;flex-direction:column"
         )}
       >
-        <Header />
+        <SiteNav />
 
         <main
           style={css(

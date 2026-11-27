@@ -186,8 +186,9 @@ export default function Refunds() {
         </p>
       )}
       <p>
-        We do not post to {intl.excluded.short}, and the order form does not offer those countries —
-        see <a href="/shipping">Shipping &amp; Delivery</a>.
+        We do not post to {intl.excluded.short}, and the order form does not offer its member
+        states. {intl.excluded.elsewhere} See{" "}
+        <a href="/shipping">Shipping &amp; Delivery</a> for the full list and the reason.
       </p>
       <ul>
         <li>

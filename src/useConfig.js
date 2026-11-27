@@ -1,11 +1,11 @@
 /* The page's one read of /api/config, as a hook.
  *
- * Every section that needs it — the edition banner, the envelope, the gallery,
- * the sign-up form, the policy pages' prices — calls this, and getConfig()
- * makes sure they all share the one request and see the same answer. */
+ * Every part that needs it — the sign-up form, the "what's inside" picture,
+ * the policy pages' prices — calls this, and getConfig() makes sure they all
+ * share the one request and see the same answer. */
 import { useEffect, useState } from "react";
 import { getConfig } from "./api.js";
-import { envelope, prices } from "./content/index.js";
+import { prices } from "./content/index.js";
 
 export default function useConfig() {
   const [config, setConfig] = useState(null);
@@ -24,12 +24,11 @@ export default function useConfig() {
   return { config, failed };
 }
 
-/* The edition on sale. The published copy is there from the first paint; the
- * live answer replaces it when the API wakes, so a sell-out marked in the panel
- * is seen even before the next publish has reached the site. */
+/* The month a sign-up starts with. Bookkeeping, not a choice: it is the
+ * calendar month the next batch goes out in, worked out by the server. */
 export function useEdition() {
   const { config } = useConfig();
-  return config?.edition || (envelope.published ? envelope.edition : null);
+  return config?.edition || null;
 }
 
 /* The plans for one region, "india" or "international": the published rate

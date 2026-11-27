@@ -1,583 +1,93 @@
-/*  The landing page.
+/*  The landing page — one page, three sections.
  *
- *  Iris walks through doors, and every door opens onto a real corner of the
- *  world — one that is there today, or one that was there once. Each month's
- *  envelope is about one of them.
+ *      hero       the Yeats line and what this is, on a stamp-edged card
+ *      inside     "What's Inside ?" over one photograph of the envelope
+ *      subscribe  SubscribeForm, which owns the whole sign-up
  *
- *  Five sections, in the order a reader meets them:
+ *  Above them, the navbar shared with the policy pages (SiteNav); below them,
+ *  one line pointing anybody with a question at Instagram, and the footer,
+ *  which is where the policy pages are linked from.
  *
- *    hero      →  the wordmark over the forest, the edition on sale, what arrives
- *    meet      →  who Iris is, and a way into her first letter
- *    inside    →  this edition's envelope, piece by piece
- *    gallery   →  photographs of real post going out
- *    subscribe →  SubscribeForm, which owns the whole sign-up
+ *  Only one thing on this page is editable from the admin panel — the "what's
+ *  inside" photograph. It is written into the site's own files (src/content/
+ *  inside.js, public/media) by the panel's publish step, so it is on screen
+ *  from the first paint with no wait on a sleeping server. Until the panel has
+ *  published once it falls back to /api/config.
  *
- *  The edition, the envelope's contents and photograph, the gallery, the
- *  pictures and the prices are the site's own files (src/content, public/media),
- *  rewritten from the admin panel through the GitHub API — so they are on screen
- *  from the first paint, with no wait on a sleeping server. Until the panel has
- *  published once, each falls back to /api/config as before; the lists below are
- *  only what shows if that cannot be reached either.
- *
- *  Styling is inline through css() as before; the parts that need media
- *  queries (the header menu, the envelope grid, the gallery) are in site.css.
+ *  Layout is in site.css; the colours and controls are styles.css and
+ *  brand-tokens.css.
  */
-import React, { useEffect, useState } from "react";
-import { css } from "./css.js";
+import React from "react";
 import { mediaUrl } from "./api.js";
-import useConfig, { useEdition } from "./useConfig.js";
-import { envelope, images } from "./content/index.js";
+import useConfig from "./useConfig.js";
+import { business } from "./business.js";
+import { inside } from "./content/index.js";
 import SubscribeForm from "./SubscribeForm.jsx";
 import SiteFooter from "./SiteFooter.jsx";
-import GlobalWaitlist from "./GlobalWaitlist.jsx";
-import Gallery from "./Gallery.jsx";
+import SiteNav from "./SiteNav.jsx";
 
-/* Mirrors DEFAULT_CONTENTS in backend/app/cycles.py. Only shown when the API
- * is unreachable; otherwise the edition's own list, from the panel, is used. */
-const ENVELOPE_FALLBACK = [
-  ["A letter from Iris", "Two printed pages from the corner of the world she has wandered into this month."],
-  ["A letter from someone she met", "One printed page from a person who lives there — or lived there, long ago."],
-  ["A place sticker", "A die-cut sticker of that month's corner of the world."],
-  ["A character sticker", "A die-cut sticker of Iris, or of somebody she met on the way."],
-  ["An art print", "A small illustrated print on card, drawn from that month's place."],
-  ["An activity sheet", "One page — a puzzle, a recipe from that place, or something to make."],
-  ["A special poem", "Written for that month by a friend of Iris, and printed to keep."],
-  ["A stamp of the place", "A printed paper stamp of that month's corner of the world, for your passport."],
-  ["A Wanderland Passport", "For first-time subscribers. A booklet with a page for every door, and a stamp to paste in each time a letter lands."],
-].map(([title, detail]) => ({ title, detail }));
-
-/* The photographs the gallery started with, shipped with the site. Shown only
- * if the API cannot be reached — the live gallery is whatever the panel holds. */
-const GALLERY_FALLBACK = [
-  ["/assets/gallery-white-stack.webp", "A stack of white envelopes printed with the blue door and the Little Door Post wordmark"],
-  ["/assets/gallery-green-seals.webp", "Sage-green envelopes with painted door cards and pressed wax seals"],
-  ["/assets/gallery-addressed.webp", "Green and white envelopes addressed by hand, stamped with strawberries and little doors"],
-  ["/assets/gallery-sunlit-nook.webp", "An edition laid out: letters, a recipe, a to-do list and stickers"],
-  ["/assets/gallery-red-race.webp", "An envelope opened out: the letter, sticker sheets, wax seals and a colouring page"],
-  ["/assets/gallery-packing.webp", "Coloured paper envelopes, handwritten notes and sticker books laid out for packing"],
-].map(([src, caption]) => ({ src, caption }));
-
-const NAV = [
-  ["#meet", "Meet Iris"],
-  ["#inside", "What's inside"],
-  ["#gallery", "Owner’s gallery"],
-  ["/red-race", "Read Door 1"],
-];
-
-/* The ragged lower edge of the hero photograph, cut out of the page colour. */
-const TORN_EDGE =
-  "polygon(0% 100%,0% 52%,3% 74%,6% 46%,9% 68%,12% 38%,15% 62%,18% 44%,21% 72%,24% 50%,27% 76%,30% 42%,33% 60%,36% 36%,39% 58%,42% 46%,45% 70%,48% 40%,51% 64%,54% 48%,57% 74%,60% 44%,63% 66%,66% 38%,69% 62%,72% 50%,75% 72%,78% 42%,81% 60%,84% 46%,87% 68%,90% 40%,93% 64%,96% 48%,100% 66%,100% 100%)";
-
-/* The separators in the line of facts under the buttons — one colour, so
- * they read as punctuation rather than decoration. */
-const dot = css("width:4px;height:4px;border-radius:50%;background:var(--color-accent-400);flex:none");
-
-const kicker = css(
-  "display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--color-heading-soft)"
-);
-const rule = css("width:26px;height:1px;background:var(--color-accent-500)");
-const h2 = css(
-  "font-family:var(--font-heading);font-weight:600;font-size:clamp(34px,6vw,60px);line-height:1.04;margin:clamp(12px,2vh,18px) 0 0;color:var(--color-heading);text-wrap:pretty"
-);
-const lede = css(
-  "font-size:clamp(15px,1.8vw,17px);line-height:1.78;margin:clamp(12px,2.2vh,20px) 0 0;color:var(--color-neutral-700);text-wrap:pretty"
-);
-
-/* The header. On a phone the links fold behind a three-line button. */
-function SiteHeader() {
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e) => e.key === "Escape" && setOpen(false);
-    /* Widening past the phone layout puts the links back in the bar; the
-     * menu should not still think it is open when the screen narrows again. */
-    const onResize = () => window.innerWidth > 900 && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onResize);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [open]);
-
-  return (
-    <header className="site-header">
-      <div className="site-header__bar">
-        <a href="/" className="site-header__brand" style={css("display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0;text-decoration:none;color:var(--color-text)")}>
-          <img
-            src="/assets/logo-round.webp"
-            alt=""
-            style={css(
-              "width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none;box-shadow:var(--shadow-sm)"
-            )}
-          />
-          <span
-            style={css(
-              "font-family:var(--font-heading);font-weight:600;font-size:clamp(16px,3.6vw,20px);line-height:1.1;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
-            )}
-          >
-            The Little Door Post
-          </span>
-        </a>
-        <a className="btn btn-primary site-header__cta" href="#subscribe" style={css("padding:9px 20px;font-size:14px;white-space:nowrap;min-height:42px")}>
-          Receive a letter
-        </a>
-        <button
-          type="button"
-          className="site-header__toggle"
-          aria-expanded={open}
-          aria-controls="site-nav"
-          aria-label={open ? "Close the menu" : "Open the menu"}
-          onClick={() => setOpen((o) => !o)}
-        >
-          <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-            {open ? (
-              <path d="M5 5l12 12M17 5 5 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            ) : (
-              <path d="M3 6h16M3 11h16M3 16h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            )}
-          </svg>
-        </button>
-        <nav id="site-nav" className={`site-header__nav${open ? " is-open" : ""}`} aria-label="Sections">
-          {NAV.map(([href, label]) => (
-            <a key={href} href={href} onClick={() => setOpen(false)}>
-              {label}
-            </a>
-          ))}
-          <a className="site-header__nav-cta" href="#subscribe" onClick={() => setOpen(false)}>
-            Receive a letter
-          </a>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-/* "Now taking orders for…" or "…sold out". Nothing at all until the API has
- * answered, rather than a guess that might be wrong. */
-function EditionBadge({ edition }) {
-  if (!edition) return null;
-  const soldOut = edition.status === "sold_out";
-  return (
-    /* The dot never wraps away from the words: it is fixed beside them, and if
-     * the words need two lines on a small phone they wrap beside the dot,
-     * left-aligned, rather than leaving it alone on a line of its own. */
-    <div
-      style={css(
-        "position:relative;display:inline-flex;flex-wrap:nowrap;align-items:center;gap:10px;max-width:100%;padding:7px 18px 7px 14px;border-radius:999px;font-size:13px;line-height:1.4;letter-spacing:.02em;text-align:left;animation:ldp-rise 1s .3s both;" +
-          (soldOut
-            ? "background:#f6e3df;color:#7c2f25;border:1px solid #e6c1b9"
-            : "background:color-mix(in srgb, var(--color-accent-100) 70%, transparent);color:var(--color-accent-800);border:1px solid rgba(255,255,255,.7);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 6px 20px rgba(58,49,40,.08)")
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className="hero__badge-dot"
-        style={css(`flex:none;width:7px;height:7px;border-radius:50%;background:${soldOut ? "#b5503f" : "var(--color-accent-600)"}`)}
-      />
-      {soldOut ? (
-        <span>
-          <strong className="hero__badge-lead">{edition.name} is sold out</strong>
-          <span className="hero__badge-sep"> &middot; </span>
-          {edition.next.name} opens soon
-        </span>
-      ) : (
-        <span>
-          Now posting the <strong>{edition.name}</strong> edition
-        </span>
-      )}
-    </div>
-  );
-}
-
-/*  The pictures set in the admin panel's "Site images" tab: the hero, and the
- *  backgrounds behind Meet Iris and Receive a letter.
- *
- *  Remembered in this browser from the last visit, so a returning reader sees
- *  the right hero at once rather than waiting on an API that may be asleep.
- *  A first-time visitor sees an empty band for that moment instead — never
- *  the old built-in picture flashing up and then being swapped out. If the
- *  API cannot be reached at all, the built-in pictures stand in.
- */
-const SITE_IMAGES_KEY = "ldp.siteImages.v1";
-
-const rememberedSiteImages = () => {
-  try {
-    return JSON.parse(window.localStorage.getItem(SITE_IMAGES_KEY) || "null");
-  } catch {
-    return null;
-  }
-};
-
-function useSiteImages(config, failed) {
-  const [remembered] = useState(rememberedSiteImages);
-  const live = config?.siteImages;
-  useEffect(() => {
-    if (!live || images.published) return;
-    try {
-      window.localStorage.setItem(SITE_IMAGES_KEY, JSON.stringify(live));
-    } catch {
-      /* Private mode — it simply is not remembered. */
-    }
-  }, [live]);
-  /* Published into the site's own files: known at once, nothing to remember. */
-  if (images.published) return images;
-  if (live) return live;
-  if (failed) return {};
-  return remembered; // null: not known yet
-}
-
-const DEFAULT_HERO = "/assets/forest.webp";
-const DEFAULT_SUBSCRIBE_BG = "/assets/gallery-green-seals.webp";
+/*  The December edition sheet, shipped with the site. It is what the middle
+ *  section shows until the panel has a photograph of its own — and what it
+ *  goes back to if that one is removed. A built-in beats an empty band: the
+ *  page keeps its shape whatever the panel holds, and whatever the API is
+ *  doing. */
+const DEFAULT_INSIDE = "/assets/whats-inside.webp";
 
 export default function TheLittleDoorPost() {
-  const { config, failed } = useConfig();
-  const edition = useEdition();
-  const site = useSiteImages(config, failed);
+  const { config } = useConfig();
+
   /* Published pictures are paths on this site; the API's are on the API. */
-  const pic = (path) => (images.published ? path || null : mediaUrl(path));
-  const heroSrc = site ? pic(site.hero) || DEFAULT_HERO : null;
-  const meetBg = site ? pic(site.meet) : null;
-
-  /* Meet Iris's words sit on a pane of glass, so they read over any picture:
-   * white words on smoked glass, or black words on frosted glass — chosen in
-   * the panel to suit the picture. Black needs a picture behind it; on the
-   * plain colour the words are always white. The small capitals and the
-   * quote follow the headings' palette, lightened on smoked glass. */
-  const meetDark = Boolean(meetBg) && site?.meetText === "dark";
-  const meetInk = meetDark ? "#1c1814" : "#ffffff";
-  const meetAccent = meetDark
-    ? "var(--color-heading)"
-    : "color-mix(in oklab, var(--color-heading-soft) 42%, #ffffff)";
-
-  /* How each chosen picture sits in its frame (Design tab sliders): the point
-   * kept in view, and the zoom around it. */
-  const frame = (slot) => {
-    const f = site?.frames?.[slot];
-    if (!f) return {};
-    return {
-      objectPosition: `${f.x}% ${f.y}%`,
-      transformOrigin: `${f.x}% ${f.y}%`,
-      transform: f.zoom > 100 ? `scale(${f.zoom / 100})` : undefined,
-    };
-  };
-  const subscribeBg = site ? pic(site.subscribe) || DEFAULT_SUBSCRIBE_BG : null;
-
-  const items = envelope.published && envelope.items.length
-    ? envelope.items
-    : config?.envelope?.items?.length
-    ? config.envelope.items
-    : ENVELOPE_FALLBACK;
-  const envelopeImage = envelope.published
-    ? envelope.image || "/assets/envelope-white.webp"
-    : mediaUrl(config?.envelope?.image) || "/assets/envelope-white.webp";
-
-  const photos = images.published
-    ? images.gallery
-    : config
-    ? (config.gallery || []).map((g) => ({ src: mediaUrl(g.url), caption: g.caption }))
-    : failed
-    ? GALLERY_FALLBACK
-    : [];
+  const chosen = inside.published ? inside.image : mediaUrl(config?.inside?.image);
+  const insideImage = chosen || DEFAULT_INSIDE;
 
   return (
-    <div style={css("background:var(--color-bg);color:var(--color-text);position:relative;overflow:clip")}>
-      <SiteHeader />
+    <div className="page">
+      <SiteNav />
 
-      {/* ── hero ───────────────────────────────────────────────────────── */}
-      <section id="top" className="hero">
-        <div className="hero__art">
-          {/* The band keeps its height while the picture is not known yet. */}
-          <img
-            key={heroSrc || "pending"}
-            src={heroSrc || undefined}
-            alt={heroSrc === DEFAULT_HERO ? "A watercolour clearing of mushroom folk, pinecone people and paper ghosts" : ""}
-            style={{
-              ...css("background:var(--color-neutral-200);animation:ldp-fade 1.4s both"),
-              ...(heroSrc && heroSrc !== DEFAULT_HERO ? frame("hero") : {}),
-            }}
-          />
-          <div
-            style={{
-              ...css("position:absolute;left:0;right:0;bottom:-1px;height:clamp(20px,3vw,34px);background:var(--color-bg)"),
-              clipPath: TORN_EDGE,
-            }}
-          />
-        </div>
+      {/* ── 1 · hero ───────────────────────────────────────────────────── */}
+      <section id="top" className="band band--stamps hero">
+        <div className="stamp-card hero__card">
+          <p className="hero__quote">
+            &ldquo;The world is full of magical things, patiently waiting for our senses to grow
+            sharper.&rdquo;
+            <span className="hero__attribution">&mdash; W.B. Yeats</span>
+          </p>
 
-        <div
-          style={css(
-            "position:absolute;left:50%;top:58%;width:min(680px,92vw);aspect-ratio:1;background:radial-gradient(circle, rgba(134,149,92,.20) 0%, transparent 62%);animation:ldp-bloom 7s ease-in-out infinite alternate;pointer-events:none"
-          )}
-        />
-        {/* The badge's height is held while the API answers, so nothing below
-          * it jumps when it appears. */}
-        <div className="hero__badge" style={css("min-height:36px;display:flex;align-items:center")}>
-          <EditionBadge edition={edition} />
-        </div>
+          <p className="hero__text">
+            The Little Door Post goes looking for them, and mails a little piece of the
+            world&rsquo;s most magical places to your door, one letter a month.
+          </p>
+          <p className="hero__text">
+            No passport, no plane, just a letter waiting in your mailbox.
+          </p>
 
-        <img
-          className="hero__wordmark"
-          src="/assets/wordmark.png"
-          alt="The Little Door Post"
-          style={css("position:relative;mix-blend-mode:multiply;animation:ldp-hero 1.5s cubic-bezier(.2,.7,.2,1) both")}
-        />
-
-        <p
-          className="hero__tagline"
-          style={css(
-            "position:relative;font-family:var(--font-heading);font-style:italic;font-weight:400;line-height:1.34;color:var(--color-heading);text-wrap:pretty;animation:ldp-rise 1.1s .45s cubic-bezier(.2,.7,.2,1) both"
-          )}
-        >
-          Every month, Iris opens a new door.
-          <br />
-          Behind it, a real corner of the world.
-        </p>
-
-        <p
-          className="hero__lede"
-          style={css(
-            "position:relative;color:var(--color-neutral-700);text-wrap:pretty;animation:ldp-rise 1.1s .6s cubic-bezier(.2,.7,.2,1) both"
-          )}
-        >
-          Some of those corners are still there today. Some were there once, long ago. Each month
-          she writes home about one of them &mdash; letters, a poem, stickers and an art print,
-          sealed into one envelope and posted to your letterbox.
-        </p>
-
-        <div
-          className="hero__actions"
-          style={css(
-            "position:relative;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;animation:ldp-rise 1.1s .75s cubic-bezier(.2,.7,.2,1) both"
-          )}
-        >
-          <a className="btn btn-primary" href="#subscribe" style={css("padding:13px 26px;font-size:15px")}>
+          <a className="btn btn-primary hero__cta" href="#subscribe">
             Receive a letter
           </a>
-          <a className="btn btn-secondary" href="#inside" style={css("padding:13px 26px;font-size:15px")}>
-            See what&rsquo;s inside
-          </a>
-        </div>
-
-        <div
-          className="hero__facts"
-          style={css(
-            "position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;font-size:13px;letter-spacing:.02em;color:var(--color-neutral-600)"
-          )}
-        >
-          <span>Real places, past and present</span>
-          <span aria-hidden="true" className="hero__sep" style={dot} />
-          <span>Printed on real paper</span>
-          <span aria-hidden="true" className="hero__sep" style={dot} />
-          <span>Posted across India and abroad</span>
         </div>
       </section>
 
-      {/* ── meet Iris ──────────────────────────────────────────────────── */}
-      <section
-        id="meet"
-        className="meet"
-        style={{
-          ...css(
-            "position:relative;padding:clamp(56px,9vh,116px) clamp(20px,5vw,44px);background-color:var(--color-accent-800);overflow:hidden"
-          ),
-          color: meetInk,
-        }}
-      >
-        {/* The panel's picture, shown as it is — no wash over it — and framed
-          * as set in the Design tab. */}
-        {meetBg && (
-          <img
-            src={meetBg}
-            alt=""
-            loading="lazy"
-            style={{
-              ...css("position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none"),
-              ...frame("meet"),
-            }}
-          />
-        )}
-        {/* The soft glow belongs to the plain green; over a photograph it
-          * would only haze it. */}
-        {!meetBg && (
-          <div
-            style={css(
-              "position:absolute;left:66%;top:44%;width:min(760px,120vw);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle, rgba(196,205,159,.20) 0%, transparent 66%);pointer-events:none"
-            )}
-          />
-        )}
-        <div
-          className="meet__grid"
-          style={css(
-            "position:relative;width:min(1120px,100%);margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:clamp(26px,5vw,60px);align-items:center"
-          )}
-        >
-          <div className={`meet__panel ${meetDark ? "meet__panel--frost" : "meet__panel--smoke"}`}>
-            <div
-              style={{
-                ...css("display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase"),
-                color: meetAccent,
-              }}
-            >
-              <span style={{ ...css("width:26px;height:1px"), background: meetAccent }} />
-              The letter-writer
-            </div>
-            <h2 className="meet__title" style={{ ...css("font-family:var(--font-heading);font-weight:600;font-size:clamp(38px,7vw,68px);line-height:1.02;margin:clamp(12px,2vh,18px) 0 0"), color: meetInk }}>
-              Meet Iris
-            </h2>
-            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:clamp(16px,2.6vh,24px) 0 0;text-wrap:pretty")}>
-              Somewhere between worlds there is a girl with red curls and a suitcase full of paper.
-            </p>
-            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
-              She travels through doors, one to the next, and every door opens somewhere real. A
-              market town that still wakes before dawn. A harbour the sea swallowed centuries ago. A
-              village with a single road in. A library that burned two thousand years back.
-            </p>
-            <p className="meet__text" style={css("font-size:clamp(16px,1.8vw,18px);line-height:1.85;margin:14px 0 0;text-wrap:pretty")}>
-              Some of these corners are famous. Most are not. Wherever she lands, she meets the
-              people who live there &mdash; or lived there once &mdash; and writes it all home:
-              printed, folded and sealed by one pair of hands.
-            </p>
-            <p
-              className="meet__quote"
-              style={{
-                ...css(
-                  "font-family:var(--font-heading);font-style:italic;font-weight:400;font-size:clamp(21px,3vw,29px);line-height:1.34;margin:clamp(22px,3.6vh,32px) 0 0;padding-left:18px;border-left:2px solid var(--color-accent-400);text-wrap:pretty"
-                ),
-                color: meetAccent,
-              }}
-            >
-              The world has never once run out of corners.
-            </p>
-            <a
-              className="btn btn-primary meet__cta"
-              href="/red-race"
-              style={css(
-                "margin-top:clamp(20px,3vh,28px);padding:12px 22px;font-size:15px"
-              )}
-            >
-              Read her first letter
-            </a>
-          </div>
-          <div style={css("display:flex;justify-content:center")}>
+      {/* ── 2 · what's inside ──────────────────────────────────────────── */}
+      <section id="inside" className="band band--paper inside">
+        <div className="inside__inner">
+          <h2 className="inside__title">What&rsquo;s Inside ?</h2>
+          <div className="inside__frame">
             <img
-              src="/assets/iris.webp"
-              alt="Iris, red-haired and mid-stride, wheeling her suitcase with letters trailing behind her"
-              className="meet__art"
-              style={css("width:min(420px,84%);filter:drop-shadow(0 24px 40px rgba(20,26,16,.42));animation:ldp-sway 9s ease-in-out infinite alternate")}
+              src={insideImage}
+              alt="Everything that comes in one month's envelope, laid out and labelled"
             />
           </div>
         </div>
       </section>
 
-      {/* ── what's inside ──────────────────────────────────────────────── */}
-      <section id="inside" className="inside" style={css("position:relative;padding:clamp(58px,9vh,118px) clamp(20px,5vw,44px)")}>
-        <div style={css("width:min(1180px,100%);margin:0 auto")}>
-          <div style={css("display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:clamp(24px,4.5vw,56px);align-items:center")}>
-            <div>
-              <div style={kicker}>
-                <span style={rule} />
-                {edition ? `The ${edition.name} envelope` : `${items.length} pieces`}
-              </div>
-              <h2 style={h2}>What&rsquo;s in the envelope</h2>
-              <p style={{ ...lede, maxWidth: "46ch" }}>
-                Every envelope is about one corner of the world. Here is exactly what is in this
-                one &mdash; every piece named, printed on real paper, nothing edible and nothing you
-                haven&rsquo;t been shown.
-              </p>
-            </div>
-            <div style={css("display:flex;justify-content:center")}>
-              <img
-                key={envelopeImage}
-                className="inside__art"
-                src={envelopeImage}
-                alt={edition ? `The ${edition.name} envelope` : "This month's envelope"}
-                style={css(
-                  "width:min(470px,92%);max-height:420px;object-fit:contain;filter:drop-shadow(0 20px 32px rgba(58,49,40,.18));animation:ldp-float 9s ease-in-out infinite alternate"
-                )}
-              />
-            </div>
-          </div>
-
-          <div className="envelope-grid" style={css("margin-top:clamp(30px,5vh,54px)")}>
-            {items.map(({ title, detail }, i) => (
-              <div
-                key={`${i}-${title}`}
-                className="glass glass--lift"
-                style={css(
-                  "display:flex;flex-direction:column;gap:9px;padding:clamp(14px,1.8vw,20px);border-radius:18px"
-                )}
-              >
-                <div style={css("display:flex;align-items:center;gap:10px")}>
-                  <span
-                    style={css(
-                      "flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--num-bg);color:var(--num-ink);font-family:var(--font-heading);font-weight:600;font-size:14px;line-height:1"
-                    )}
-                  >
-                    {i + 1}
-                  </span>
-                  <span
-                    style={css(
-                      "font-family:var(--font-heading);font-weight:600;font-size:17px;line-height:1.22;color:var(--color-heading);text-wrap:pretty"
-                    )}
-                  >
-                    {title}
-                  </span>
-                </div>
-                {detail && (
-                  <p style={css("margin:0;font-size:14px;line-height:1.62;color:var(--color-neutral-700);text-wrap:pretty")}>{detail}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── the owner's gallery: photographs only ──────────────────────── */}
-      {(images.published ? images.gallery.length > 0 : true) && (
-        <section id="gallery" className="owner-gallery" style={css("position:relative;padding:clamp(40px,8vh,104px) clamp(16px,5vw,44px)")}>
-          <div style={css("width:min(1180px,100%);margin:0 auto")}>
-            <h2 style={{ ...h2, margin: "0 0 clamp(16px,3vh,28px)" }}>Owner&rsquo;s gallery</h2>
-            <Gallery photos={photos} pending={!images.published && !config && !failed} />
-          </div>
-        </section>
-      )}
-
-      {/* ── sign up ────────────────────────────────────────────────────── */}
-      <section id="subscribe" className="subscribe" style={css("position:relative;padding:clamp(52px,8vh,104px) clamp(14px,4vw,44px);overflow:hidden")}>
-        {/* The picture behind the form, shown as it is: no pale wash over it
-          * and no fading of its colours. The form sits on its own solid card,
-          * so it stays readable whatever is behind. */}
-        <div style={css("position:absolute;inset:0;pointer-events:none;background:var(--color-neutral-200)")}>
-          {subscribeBg && (
-            <img
-              src={subscribeBg}
-              alt=""
-              loading="lazy"
-              style={{ ...css("width:100%;height:100%;object-fit:cover"), ...frame("subscribe") }}
-            />
-          )}
-        </div>
-
-        {/* One card of frosted glass, solid enough to read over any background. On a desktop it
-          * is wide, with the heading on the left and the form on the right,
-          * so the whole section fits one screen; on a phone it stacks. The
-          * layout is in site.css (.subscribe…). */}
-        <div
-          className="subscribe__card glass glass--strong"
-          style={css("position:relative;margin:0 auto;border-radius:28px")}
-        >
+      {/* ── 3 · the order form ─────────────────────────────────────────── */}
+      <section id="subscribe" className="band band--stamps subscribe">
+        <div className="stamp-card subscribe__card">
           <div className="subscribe__intro">
-            <h2 style={css("font-family:var(--font-heading);font-weight:600;font-size:clamp(32px,5.6vw,52px);line-height:1.04;margin:0;color:var(--color-heading)")}>
-              Receive a letter
-            </h2>
-            <p className="subscribe__lede" style={{ ...lede, maxWidth: "42ch" }}>
-              {!edition
-                ? "Choose a subscription, tell Iris where to post it, and your address goes into this month’s batch."
-                : edition.open
-                ? `Choose a subscription, tell Iris where to post it, and your address goes into the ${edition.name} batch.`
-                : `Every copy of the ${edition.name} edition has gone. ${edition.next.name} is next.`}
+            <h2 className="subscribe__title">Receive a letter</h2>
+            <p className="subscribe__lede">
+              Choose how many months, tell us where to post it, and your address goes into the
+              next batch.
             </p>
           </div>
           <div className="subscribe__form">
@@ -586,7 +96,22 @@ export default function TheLittleDoorPost() {
         </div>
       </section>
 
-      <GlobalWaitlist />
+      {/* ── anything else ──────────────────────────────────────────────── */}
+      <section className="ask">
+        <p className="ask__text">
+          Any questions, or anything you need to know before you order? Send us a message on
+          Instagram at{" "}
+          <a
+            className="ask__handle"
+            href={`https://instagram.com/${business.instagram}`}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            @{business.instagram}
+          </a>{" "}
+          and we will write back.
+        </p>
+      </section>
 
       <SiteFooter />
     </div>

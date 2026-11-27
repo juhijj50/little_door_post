@@ -1,586 +1,435 @@
-/*  The few parts of the landing page that need media queries — which inline
- *  styles cannot have: the header's menu, the envelope grid, and the gallery.
- *  Everything else on the page stays inline through css(), as before.
+/*  The site's chrome and the landing page's three sections.
+ *
+ *      hero       the stamp wall, with a white stamp-edged card on it
+ *      inside     "What's Inside ?" over one photograph of the envelope
+ *      subscribe  the stamp wall again, with the order form on a card
+ *
+ *  Everything below is layout. The colours, the buttons and the form controls
+ *  are styles.css and brand-tokens.css, unchanged.
+ *
+ *  The cards are cut with a postage-stamp edge — four scalloped masks
+ *  intersected. Browsers without mask-composite get a plain rounded card
+ *  instead, which is the same card without the teeth.
  */
 
-/* ── header ─────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   The bands
+   ══════════════════════════════════════════════════════════════════════ */
 
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 60;
-  background: color-mix(in srgb, var(--color-bg) 92%, transparent);
-  backdrop-filter: blur(9px);
-  border-bottom: 1px solid var(--color-neutral-300);
+.page {
+  background: var(--color-bg);
+  color: var(--color-text);
 }
-/* One row on a desktop — name on the left, the links and the button on the
- * right — so the header costs ~60px of the screen, not two rows of it. Its
- * height is a variable because the hero sizes itself to what is left. */
+
 :root {
-  /* The bar's 60px plus its 1px bottom border. */
-  --header-h: 61px;
+  --header-h: 60px;
 }
-.site-header__bar {
-  width: min(1180px, 100%);
-  min-height: calc(var(--header-h) - 1px);
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px clamp(14px, 2vw, 28px);
-  padding: 6px clamp(14px, 4vw, 40px);
-}
-.site-header__nav {
-  order: 2;
-  display: flex;
-  align-items: center;
-  gap: clamp(14px, 1.8vw, 26px);
-}
-.site-header__nav a {
-  font-size: 15px;
-  text-decoration: none;
-  color: var(--color-neutral-800);
-  white-space: nowrap;
-}
-.site-header__nav a:hover {
-  color: var(--color-accent-700);
-}
-.site-header__cta {
-  order: 3;
-}
-.site-header__toggle,
-.site-header__nav .site-header__nav-cta {
-  display: none;
-}
-
-/* A phone or a narrow window: the links fold away behind three lines, and the
- * bar is one row — the name gives way (with an ellipsis) before anything
- * wraps. */
-@media (max-width: 900px) {
-  .site-header__bar {
-    flex-wrap: wrap;
-  }
-  .site-header__brand {
-    flex: 1 1 0;
-    min-width: 0;
-  }
-  .site-header__cta {
-    padding: 8px 14px !important;
-    font-size: 13px !important;
-    min-height: 40px;
-  }
-  .site-header__toggle {
-    order: 3;
-    display: inline-grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border: 1px solid var(--color-neutral-300);
-    border-radius: 12px;
-    background: var(--color-neutral-100);
-    color: var(--color-text);
-    cursor: pointer;
-  }
-  .site-header__nav {
-    order: 4;
-    flex-basis: 100%;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-    padding: 4px 0 10px;
-  }
-  .site-header__nav.is-open {
-    display: flex;
-    animation: ldp-drop 0.18s ease-out both;
-  }
-  .site-header__nav a {
-    padding: 13px 4px;
-    font-size: 16px;
-    border-bottom: 1px solid var(--color-neutral-300);
-  }
-  .site-header__nav a:last-child {
-    border-bottom: 0;
+@media (max-width: 560px) {
+  :root {
+    --header-h: 54px;
   }
 }
 
-/* A narrow phone has no room for the button beside the name and the menu, so
- * it moves into the menu, last and filled. The hero's own button is a thumb's
- * reach below either way. */
-@media (max-width: 440px) {
-  .site-header__cta {
-    display: none !important;
-  }
-  .site-header__nav .site-header__nav-cta {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-    padding: 12px;
-    border-radius: 999px;
-    border-bottom: 0;
-    background: var(--color-accent-600);
-    color: var(--color-neutral-100);
-    font-family: var(--font-heading);
-    font-weight: 600;
-  }
-}
-
-@keyframes ldp-drop {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: none; }
-}
-
-/* ── the hero ──────────────────────────────────────────────────────────── */
-
-
-.hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 0 clamp(20px, 5vw, 40px) clamp(52px, 9vh, 92px);
-  overflow: hidden;
-}
-.hero__art {
-  align-self: stretch;
-  position: relative;
-  margin: 0 calc(-1 * clamp(20px, 5vw, 40px)) clamp(22px, 4vh, 44px);
-  line-height: 0;
-}
-.hero__art img {
-  width: 100%;
-  height: clamp(190px, 34svh, 400px);
-  object-fit: cover;
-  object-position: 50% 62%;
-}
-.hero__badge { margin-bottom: clamp(14px, 2.4vh, 22px); }
-.hero__wordmark { width: min(580px, 86vw); }
-.hero__tagline {
-  max-width: 32ch;
-  margin: clamp(6px, 1.6vh, 16px) 0 0;
-  font-size: clamp(21px, 4.6vw, 32px);
-}
-.hero__lede {
-  max-width: 48ch;
-  margin: clamp(14px, 2.4vh, 22px) 0 0;
-  font-size: clamp(15px, 2vw, 17px);
-  line-height: 1.72;
-}
-.hero__actions { margin-top: clamp(20px, 3.4vh, 32px); }
-.hero__facts { margin-top: clamp(20px, 3vh, 28px); }
-
-/* On a phone the three facts do not fit on one line, and wrapping them left a
- * separator dot dangling at the start of the second line. So they stack, one
- * to a line, and the separators go. */
-@media (max-width: 600px) {
-  .hero__facts {
-    flex-direction: column;
-    gap: 4px !important;
-  }
-  .hero__facts .hero__sep {
-    display: none;
-  }
-}
-
-/* A desktop: the whole hero on one screen, below the header, with nothing to
- * scroll for. Every height is a share of the screen's height, so it fits a
- * 1366×768 laptop as well as a 1440×900 monitor. Shorter windows (and phones)
- * keep the stacked layout above. */
-@media (min-width: 901px) and (min-height: 560px) {
-  .hero {
-    min-height: calc(100svh - var(--header-h));
-    padding-bottom: 3svh;
-  }
-  .hero__art { margin-bottom: 2.4svh; }
-  .hero__art img { height: 25svh; }
-  /* The auto margins centre the words in whatever height is left under the
-   * illustration, so a tall screen gets even space above and below rather
-   * than an empty band at the bottom. */
-  .hero__badge { margin-top: auto; margin-bottom: 1.4svh; }
-  .hero__facts { margin-bottom: auto; }
-  .hero__wordmark { width: auto; height: 16svh; max-width: 560px; }
-  .hero__tagline { max-width: 40ch; margin-top: 1svh; font-size: clamp(20px, 3.3svh, 32px); }
-  .hero__lede { max-width: 62ch; margin-top: 1.4svh; font-size: clamp(14px, 2svh, 17px); line-height: 1.6; }
-  .hero__actions { margin-top: 2.6svh; }
-  .hero__facts { margin-top: 2svh; }
-}
-
-/* ── the envelope ──────────────────────────────────────────────────────── */
-
-/* Five across on a desktop at ordinary zoom — the brief, and the reason this
- * is a fixed count rather than auto-fit. Fewer as the screen narrows. */
-.envelope-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(12px, 1.6vw, 18px);
-}
-@media (max-width: 1080px) {
-  .envelope-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-}
-@media (max-width: 720px) {
-  .envelope-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 340px) {
-  .envelope-grid { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* ── the gallery ───────────────────────────────────────────────────────── */
-
-.gallery {
-  position: relative;
-}
-/* Photographs only: two rows, five columns on a desktop — ten in view — and
- * the whole thing slides sideways a column at a time (each snaps into place),
- * so a column of two always moves together. Fewer columns on smaller screens.
- * The arrows move it a screenful; a finger or a trackpad moves it freely. */
-.gallery__track {
-  --per-view: 5;
-  --gap: 14px;
-  display: grid;
-  grid-template-rows: repeat(2, auto);
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
-  gap: var(--gap);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-  padding: 4px 2px 8px;
-}
-.gallery__track::-webkit-scrollbar {
-  display: none;
-}
-@media (max-width: 1080px) {
-  .gallery__track { --per-view: 4; }
-}
-@media (max-width: 760px) {
-  .gallery__track { --per-view: 3; --gap: 10px; }
-}
-@media (max-width: 460px) {
-  .gallery__track { --per-view: 2.4; --gap: 8px; }
-}
-.gallery__tile {
-  scroll-snap-align: start;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--color-neutral-200);
-  box-shadow: var(--shadow-sm);
-  cursor: zoom-in;
-  aspect-ratio: 1 / 1;
-}
-.gallery__tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.4s ease;
-}
-.gallery__tile:hover img {
-  transform: scale(1.04);
-}
-.gallery__arrows {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.round-arrow {
-  display: inline-grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--color-neutral-400);
-  background: var(--color-neutral-100);
-  color: var(--color-accent-800);
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-}
-.round-arrow:hover:not(:disabled) {
-  background: var(--color-accent-100);
-  border-color: var(--color-accent-500);
-}
-.round-arrow:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-/* ── one photo, full screen ────────────────────────────────────────────── */
-
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: clamp(10px, 3vw, 28px);
-  background: rgba(28, 24, 18, 0.96);
-  animation: ldp-fade 0.2s both;
-}
-.lightbox__close {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: end;
-}
-.lightbox__figure {
-  grid-column: 2;
-  grid-row: 2;
-  margin: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 0;
-}
-.lightbox__figure img {
-  max-width: 100%;
-  max-height: calc(100% - 48px);
-  object-fit: contain;
-  border-radius: var(--radius-md);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-}
-.lightbox__prev { grid-column: 1; grid-row: 2; }
-.lightbox__next { grid-column: 3; grid-row: 2; }
-@media (max-width: 600px) {
-  /* Arrows under the photo on a phone, where the sides have no room. */
-  .lightbox {
-    grid-template-columns: 1fr auto 1fr;
-  }
-  .lightbox__figure { grid-column: 1 / -1; }
-  .lightbox__prev { grid-row: 3; grid-column: 1; justify-self: start; }
-  .lightbox__next { grid-row: 3; grid-column: 3; justify-self: end; }
-}
-
-/* No dot in the edition badge on a phone: there the words take two lines, and
- * a dot beside a two-line pill looks stray. The words stand alone, centred. */
-@media (max-width: 600px) {
-  .hero__badge-dot {
-    display: none;
-  }
-  .hero__badge > div {
-    justify-content: center;
-    text-align: center !important;
-    padding: 7px 18px !important;
-  }
-  /* Two lines on a phone: what has sold out, then what is next — no
-   * separator dot at the end of the first. */
-  .hero__badge-sep {
-    display: none;
-  }
-  .hero__badge-lead {
-    display: block;
-  }
-}
-
-/* ── receive a letter ──────────────────────────────────────────────────── */
-
-/* Landing on a section from the menu puts its top just under the sticky
- * header, not behind it. */
+/* The bar sticks, so a heading jumped to must stop below it, not under it. */
 section[id] {
   scroll-margin-top: var(--header-h);
 }
 
-/* A phone: the heading sits above the form, centred, on the one card. */
-.subscribe__card {
-  width: min(660px, 100%);
-  padding: clamp(20px, 5vw, 44px);
-}
-.subscribe__intro {
-  text-align: center;
-  margin-bottom: clamp(22px, 3.6vh, 34px);
-}
-.subscribe__lede {
-  margin-left: auto !important;
-  margin-right: auto !important;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The navbar
+   ═══════════════════════════════════════════════════════════════════ */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 55;
+  height: var(--header-h);
+  /* A flex item inside the policy pages' column wrapper, so say so. */
+  flex: none;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  border-bottom: 1px solid var(--color-divider);
 }
 
-/* A desktop: the whole section on one screen below the header. The card is
- * wide — heading on the left, form on the right — so the steps are short
- * enough to fit, and on a short laptop screen the form scrolls inside the
- * card rather than pushing the section past the bottom of the screen. */
-@media (min-width: 901px) and (min-height: 560px) {
+.nav__bar {
+  position: relative;
+  height: 100%;
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 0 clamp(14px, 4vw, 44px);
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2.6vw, 28px);
+}
+
+.nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-right: auto;
+  text-decoration: none;
+  color: var(--color-text);
+}
+.nav__brand img {
+  width: clamp(30px, 6vw, 36px);
+  height: clamp(30px, 6vw, 36px);
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  box-shadow: var(--shadow-sm);
+}
+.nav__name {
+  font-family: var(--font-hand);
+  font-size: clamp(16px, 3.4vw, 20px);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Wide: the links and the button sit in the bar, and the three-line button is
+ * not there at all. */
+.nav__menu {
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 2.4vw, 26px);
+  flex: none;
+}
+.nav__link {
+  font-size: clamp(12.5px, 1.5vw, 14px);
+  line-height: 1.2;
+  white-space: nowrap;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--color-text) 74%, transparent);
+}
+.nav__link:hover {
+  color: var(--color-accent-700);
+}
+
+.nav__cta {
+  flex: none;
+  min-height: 38px;
+  padding: 8px clamp(13px, 2vw, 20px);
+  font-size: clamp(12.5px, 1.5vw, 14px);
+  white-space: nowrap;
+}
+
+.nav__toggle,
+.nav__scrim {
+  display: none;
+}
+
+/* Phone: the right-hand side folds behind the three lines. The breakpoint is
+ * PHONE in SiteNav.jsx — keep the two in step. */
+@media (max-width: 760px) {
+  .nav__toggle {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: none;
+    padding: 0;
+    border: 1px solid var(--color-divider);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-neutral-100) 70%, transparent);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .nav__toggle svg {
+    display: block;
+  }
+
+  .nav__menu {
+    position: absolute;
+    top: calc(100% + 1px);
+    right: clamp(14px, 4vw, 44px);
+    left: clamp(14px, 4vw, 44px);
+    z-index: 2;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 6px;
+    border: 1px solid var(--color-divider);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--color-bg) 96%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.5);
+    backdrop-filter: blur(16px) saturate(1.5);
+    box-shadow: var(--shadow-lg);
+    animation: ldp-fade 0.18s ease both;
+  }
+  .nav__menu.is-open {
+    display: flex;
+  }
+  .nav__link {
+    padding: 13px 12px;
+    font-size: 15px;
+    border-radius: var(--radius-md);
+  }
+  .nav__link + .nav__link {
+    border-top: 1px solid var(--color-divider);
+  }
+  .nav__cta {
+    margin-top: 6px;
+    width: 100%;
+    min-height: 46px;
+    font-size: 15px;
+  }
+
+  /* Behind the panel, under the bar's own z-index: a tap anywhere else closes
+   * the menu. */
+  .nav__scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: default;
+  }
+}
+
+@media (max-width: 420px) {
+  .nav__name {
+    display: none;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   The bands
+   ══════════════════════════════════════════════════════════════════════ */
+
+.band {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 7vw, 72px) clamp(14px, 4vw, 48px);
+}
+
+/* The passport-stamp wall, behind the hero and the order form. A texture, so
+ * it is allowed to scale: `cover` keeps it filling the band at any shape. */
+.band--stamps {
+  background-image: url("/assets/stamps-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* White, not cream: the "What's Inside ?" sheet is photographed on white, and
+ * on cream it would read as a pasted-on rectangle. */
+.band--paper {
+  background: #ffffff;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   A card with a postage-stamp edge
+   ══════════════════════════════════════════════════════════════════════ */
+
+.stamp-card {
+  /* The size of one tooth. The tiles rarely divide evenly into the card, so
+   * the corners carry a part-tooth — as the artwork does. */
+  --scallop: clamp(11px, 2.6vw, 18px);
+  position: relative;
+  background: #ffffff;
+  border-radius: 6px;
+  /* Clear of the teeth on every side, so no word is ever bitten into. */
+  padding: calc(var(--scallop) + clamp(18px, 4.5vw, 38px));
+}
+
+@supports ((mask-composite: intersect) or (-webkit-mask-composite: source-in)) {
+  .stamp-card {
+    border-radius: 0;
+    -webkit-mask:
+      radial-gradient(var(--scallop) at 50% 0, #0000 97%, #000)
+        0 0 / calc(var(--scallop) * 2) 100% repeat-x,
+      radial-gradient(var(--scallop) at 50% 100%, #0000 97%, #000)
+        0 100% / calc(var(--scallop) * 2) 100% repeat-x,
+      radial-gradient(var(--scallop) at 0 50%, #0000 97%, #000)
+        0 0 / 100% calc(var(--scallop) * 2) repeat-y,
+      radial-gradient(var(--scallop) at 100% 50%, #0000 97%, #000)
+        100% 0 / 100% calc(var(--scallop) * 2) repeat-y;
+    mask:
+      radial-gradient(var(--scallop) at 50% 0, #0000 97%, #000)
+        0 0 / calc(var(--scallop) * 2) 100% repeat-x,
+      radial-gradient(var(--scallop) at 50% 100%, #0000 97%, #000)
+        0 100% / calc(var(--scallop) * 2) 100% repeat-x,
+      radial-gradient(var(--scallop) at 0 50%, #0000 97%, #000)
+        0 0 / 100% calc(var(--scallop) * 2) repeat-y,
+      radial-gradient(var(--scallop) at 100% 50%, #0000 97%, #000)
+        100% 0 / 100% calc(var(--scallop) * 2) repeat-y;
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   1 · hero
+   ══════════════════════════════════════════════════════════════════════ */
+
+.hero {
+  min-height: calc(100svh - var(--header-h));
+}
+
+.hero__card {
+  width: min(760px, 100%);
+  text-align: center;
+  animation: ldp-rise 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.hero__quote {
+  font-family: var(--font-hand);
+  font-size: clamp(22px, 5.2vw, 38px);
+  line-height: 1.34;
+  margin: 0;
+  color: var(--color-text);
+  text-wrap: pretty;
+}
+
+.hero__attribution {
+  display: block;
+  margin-top: 0.3em;
+}
+
+.hero__text {
+  font-family: var(--font-hand);
+  font-size: clamp(15px, 3.3vw, 23px);
+  line-height: 1.5;
+  margin: clamp(18px, 4vw, 30px) 0 0;
+  color: var(--color-text);
+  text-wrap: pretty;
+}
+
+.hero__text + .hero__text {
+  margin-top: 0.7em;
+}
+
+.hero__cta {
+  margin-top: clamp(22px, 4.5vw, 34px);
+  padding: 13px 30px;
+  font-size: 15px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2 · what's inside
+   ══════════════════════════════════════════════════════════════════════ */
+
+.inside {
+  align-items: stretch;
+  padding-top: clamp(36px, 8vw, 86px);
+  padding-bottom: clamp(36px, 8vw, 86px);
+}
+
+.inside__inner {
+  width: min(1040px, 100%);
+  margin: 0 auto;
+}
+
+.inside__title {
+  font-family: var(--font-hand);
+  font-weight: 700;
+  font-size: clamp(28px, 7vw, 54px);
+  line-height: 1.1;
+  margin: 0 0 clamp(22px, 5vw, 44px);
+  color: var(--color-text);
+}
+
+.inside__frame {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.inside__frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   3 · the order form
+   ══════════════════════════════════════════════════════════════════════ */
+
+.subscribe {
+  padding-top: clamp(28px, 6vw, 60px);
+  padding-bottom: clamp(28px, 6vw, 60px);
+}
+
+.subscribe__card {
+  width: min(660px, 100%);
+}
+
+.subscribe__intro {
+  text-align: center;
+  margin-bottom: clamp(20px, 3.6vw, 32px);
+}
+
+.subscribe__title {
+  font-family: var(--font-hand);
+  font-weight: 700;
+  font-size: clamp(28px, 6.4vw, 46px);
+  line-height: 1.12;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.subscribe__lede {
+  font-size: clamp(14px, 1.8vw, 16px);
+  line-height: 1.7;
+  margin: 12px auto 0;
+  max-width: 44ch;
+  color: var(--color-neutral-700);
+  text-wrap: pretty;
+}
+
+/* A desktop: heading on the left, form on the right, so the whole section is
+ * one screen and the steps stay short. */
+@media (min-width: 901px) and (min-height: 620px) {
   .subscribe {
     min-height: calc(100svh - var(--header-h));
-    display: flex;
-    align-items: center;
-    padding: 3svh clamp(20px, 4vw, 44px) !important;
+    justify-content: center;
   }
   .subscribe__card {
     width: min(1120px, 100%);
     display: grid;
-    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.4fr);
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
     gap: clamp(28px, 4vw, 56px);
-    padding: clamp(24px, 3.4svh, 40px) clamp(28px, 3.4vw, 48px);
+    align-items: center;
   }
   .subscribe__intro {
-    align-self: center;
     text-align: left;
     margin: 0;
   }
   .subscribe__lede {
-    margin-left: 0 !important;
+    margin-left: 0;
+    margin-right: 0;
   }
-  /* The height limit sits on the form, not the card: a grid does not hold
-   * its rows to its own max-height. Screen, less header, section padding
-   * and card padding. */
+  /* The limit sits on the form, not on the card: a grid does not hold its
+   * rows to its own max-height. */
   .subscribe__form {
-    max-height: calc(100svh - var(--header-h) - 6svh - 7svh);
+    max-height: 76svh;
     overflow-y: auto;
     padding-right: 6px;
     margin-right: -6px;
   }
-  /* The gaps between the form's parts, tightened for the screen. */
   .subscribe__form form {
     gap: clamp(14px, 2.2svh, 22px) !important;
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════════════
-   Glass
-   ══════════════════════════════════════════════════════════════════════ */
-
-/* A pane of frosted glass: translucent paper, blurred and brightened, a
- * bright hairline at its edge, and a shadow that lifts it off the page. */
-.glass {
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-.glass--strong {
-  background: var(--glass-bg-strong);
-}
-.glass--lift {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.glass--lift:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 44px rgba(58, 49, 40, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-/* The header: glass across the top of the screen. */
-.site-header {
-  background: rgba(248, 243, 232, 0.8);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  backdrop-filter: blur(16px) saturate(1.6);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 4px 24px rgba(58, 49, 40, 0.06);
-}
-
-/* A framed picture zoomed in must not spill out of its band. */
-.hero__art {
-  overflow: hidden;
-}
-
-/* Meet Iris's words on glass: smoked under white words, frosted under
- * black ones. Readable over any picture, without dimming the picture. */
-.meet__panel {
-  position: relative;
-  padding: clamp(22px, 3.4vw, 44px);
-  border-radius: 28px;
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3);
-}
-.meet__panel--smoke {
-  background: var(--glass-dark-bg);
-  border: 1px solid var(--glass-dark-border);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12);
-}
-.meet__panel--frost {
-  background: rgba(255, 253, 247, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 18px 50px rgba(58, 49, 40, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-}
-
-/* Gallery photographs in glass frames. */
-.gallery__tile {
-  padding: 6px;
-  border-radius: 18px;
-  background: var(--glass-bg);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-}
-.gallery__tile img {
-  border-radius: 13px;
-}
-.round-arrow {
-  background: var(--glass-bg-strong);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur);
-  border-color: var(--glass-border);
-}
-
-/* No z-index on the sections: the glow comes first in the page and every
- * section after it is painted over it anyway. A z-index here would make each
- * section its own layer and stop the logo blending into the page (its white
- * background shows as a box). */
-
-/* ── meet Iris on one screen ───────────────────────────────────────────── */
-
-/* A desktop: the section is the screen below the header, and everything in
- * it is sized from the screen's height — the words, their spacing and Iris
- * herself — so it fits a 1366×768 laptop and a 1920×1080 monitor alike
- * without scrolling. Phones keep the stacked layout. */
-@media (min-width: 901px) and (min-height: 560px) {
-  .meet {
-    min-height: calc(100svh - var(--header-h));
-    display: flex;
-    align-items: center;
-    padding: 3svh clamp(20px, 4vw, 44px) !important;
-  }
-  .meet__grid {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr) !important;
-    gap: clamp(24px, 4vw, 56px) !important;
-  }
-  .meet .meet__panel {
-    padding: 3svh clamp(24px, 2.8vw, 40px);
-  }
-  .meet__title {
-    font-size: clamp(32px, 6.4svh, 64px) !important;
-    margin-top: 1.2svh !important;
-  }
-  .meet__text {
-    font-size: clamp(14px, 1.95svh, 17.5px) !important;
-    line-height: 1.68 !important;
-    margin-top: 1.3svh !important;
-  }
-  .meet__quote {
-    font-size: clamp(18px, 2.9svh, 27px) !important;
-    margin-top: 2svh !important;
-  }
-  .meet__cta {
-    margin-top: 2.2svh !important;
-  }
-  .meet__art {
-    width: auto !important;
-    max-width: 100%;
-    max-height: calc(100svh - var(--header-h) - 10svh);
-  }
-}
-
-
-/* ── receive a letter: where, then plan (a phone) ──────────────────────── */
-
 /* The first part of the form is two screens on a phone — where it is going,
  * then which plan — and one on a desktop, where both fit. Marked in
- * SubscribeForm.jsx: .sub-where and .sub-plan are the two halves,
- * .sub-mobile-only is for what only the split needs (the extra Next, Back and
- * the plan heading). */
+ * SubscribeForm.jsx: .sub-where and .sub-plan are the two halves, and
+ * .sub-mobile-only is what only the split needs. */
 @media (min-width: 901px) {
   .sub-mobile-only { display: none !important; }
 }
@@ -589,61 +438,179 @@ section[id] {
   .sub-part[data-sub="plan"] .sub-where { display: none !important; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   Ask us anything
+   ══════════════════════════════════════════════════════════════════════ */
 
-/* ── a phone: less scrolling ───────────────────────────────────────────── */
-
-/* The sections each took a screen or more on a phone. Tighter space between
- * them, a smaller Iris and envelope photo, and the nine pieces of the envelope
- * in a row you swipe instead of a column of two. Desktop is untouched. */
-@media (max-width: 720px) {
-  .envelope-grid {
-    display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    /* Runs to the screen's edges so the next piece peeks in from the side. */
-    margin-left: calc(-1 * clamp(20px, 5vw, 44px));
-    margin-right: calc(-1 * clamp(20px, 5vw, 44px));
-    padding: 6px clamp(20px, 5vw, 44px) 16px;
-    scroll-padding-left: clamp(20px, 5vw, 44px);
-  }
-  .envelope-grid::-webkit-scrollbar {
-    display: none;
-  }
-  .envelope-grid > * {
-    flex: 0 0 min(72%, 270px);
-    scroll-snap-align: start;
-  }
-  .inside__art {
-    max-height: 190px !important;
-  }
+.ask {
+  padding: clamp(26px, 5vw, 44px) clamp(16px, 5vw, 40px);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-divider);
+  text-align: center;
 }
-@media (max-width: 600px) {
-  .meet,
-  .inside,
-  .owner-gallery {
-    padding-top: 40px !important;
-    padding-bottom: 40px !important;
-  }
-  .subscribe {
-    padding-top: 28px !important;
-    padding-bottom: 36px !important;
-  }
-  .meet__art {
-    width: min(230px, 62%) !important;
-  }
-  .meet .meet__panel {
-    padding: 20px 18px;
-  }
-  .hero {
-    padding-bottom: 36px;
-  }
-  .hero__art {
-    margin-bottom: 18px;
-  }
-  .hero__art img {
-    height: clamp(150px, 26svh, 220px);
-  }
+
+.ask__text {
+  margin: 0 auto;
+  max-width: 52ch;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--color-neutral-700);
+}
+
+.ask__handle {
+  font-family: var(--font-hand);
+  font-size: 1.15em;
+  white-space: nowrap;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The footer
+   ═══════════════════════════════════════════════════════════════════ */
+
+.foot {
+  position: relative;
+  background: var(--color-bg);
+  border-top: 1px solid var(--color-divider);
+  padding: clamp(26px, 4.5vw, 46px) clamp(18px, 5vw, 44px) clamp(18px, 3vw, 26px);
+  font-family: var(--font-body);
+}
+
+.foot__inner {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+}
+
+/* The brand on the left, the two short lists on the right — and those two
+ * stay beside each other all the way down, which is what keeps the footer
+ * from turning into a tall stack on a phone. */
+.foot__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: clamp(20px, 4vw, 48px);
+}
+
+.foot__brand {
+  flex: 1 1 260px;
+  min-width: 0;
+  max-width: 40ch;
+}
+
+.foot__cols {
+  flex: 0 1 auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: clamp(22px, 6vw, 64px);
+}
+
+.foot__col {
+  min-width: 0;
+}
+
+.foot__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: var(--color-text);
+}
+.foot__mark img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.foot__mark span {
+  font-family: var(--font-hand);
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.foot__blurb {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
+  text-wrap: pretty;
+}
+
+.foot__heading {
+  display: block;
+  margin: 0 0 9px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-text) 48%, transparent);
+}
+
+.foot__links {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.foot__links a {
+  font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+  overflow-wrap: anywhere;
+}
+.foot__links a:hover,
+.foot__policies a:hover {
+  color: var(--color-accent-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.foot__hours {
+  margin: 9px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+}
+
+/* All seven, as one wrapping row. A tall list of policies is what made the
+ * old footer a screen and a half on a phone. */
+.foot__policies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px 18px;
+  margin-top: clamp(20px, 3.5vw, 34px);
+  padding-top: clamp(14px, 2.2vw, 20px);
+  border-top: 1px solid var(--color-divider);
+}
+.foot__policies .foot__heading {
+  margin: 0;
+  flex: none;
+}
+.foot__policies a {
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-decoration: none;
+  color: color-mix(in srgb, var(--color-text) 70%, transparent);
+}
+
+.foot__base {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  justify-content: space-between;
+  margin-top: clamp(14px, 2.2vw, 20px);
+  padding-top: clamp(12px, 2vw, 16px);
+  border-top: 1px solid var(--color-divider);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--color-text) 48%, transparent);
+}
+
+.foot__address {
+  font-style: normal;
+  margin: 0;
 }

@@ -1,24 +1,13 @@
 import React, { Suspense, lazy, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
-/* The redesign's tokens, layered over the component sheet above. See the file
- * header — fold it into styles.css if you would rather keep one stylesheet. */
+/* The brand's tokens, layered over the component sheet above. */
 import "./brand-tokens.css";
-/* The landing page's header menu, envelope grid and gallery — the parts that
- * need media queries. */
+/* The landing page's three sections. */
 import "./site.css";
 import { warmUp } from "./api.js";
-import useConfig from "./useConfig.js";
-import { applyTheme, rememberedTheme, useSiteTheme } from "./theme.js";
-import { design } from "./content/index.js";
-
-/* The colours chosen in the panel, applied before the first paint: the
- * published ones (content/design.js) if the panel has written them, otherwise
- * from the last visit and then confirmed from /api/config. */
-applyTheme(design.published ? design.theme : rememberedTheme());
 import { usePath, useScrollOnNavigate, interceptLinks } from "./router.js";
 import TheLittleDoorPost from "./TheLittleDoorPost.jsx";
-import RedRace from "./RedRace.jsx";
 import Terms from "./legal/Terms.jsx";
 import Privacy from "./legal/Privacy.jsx";
 import Refunds from "./legal/Refunds.jsx";
@@ -37,14 +26,13 @@ const AdminPage = () => (
   </Suspense>
 );
 
-/* One landing page, one letter, and seven policy pages. The router is ours and
- * lives in router.js — 100 lines, no dependency, and no more than this needs.
+/* One landing page and seven policy pages. The router is ours and lives in
+ * router.js — 100 lines, no dependency, and no more than this needs.
  *
  * Anchors like #subscribe are still left to the browser, which scrolls to them
  * without any help from us. */
 const ROUTES = {
   "/": TheLittleDoorPost,
-  "/red-race": RedRace,
   "/terms": Terms,
   "/privacy": Privacy,
   "/refunds": Refunds,
@@ -63,15 +51,6 @@ const routeFor = (path) => {
   return ROUTES[key] || NotFound;
 };
 
-/* Every page but the panel follows the chosen colours. The panel reads the
- * same config for its own preview, so it is skipped here to save a request
- * before sign-in. */
-function SiteTheme() {
-  const { config } = useConfig();
-  useSiteTheme(design.published ? null : config);
-  return null;
-}
-
 function App() {
   const path = usePath();
 
@@ -89,12 +68,7 @@ function App() {
   useScrollOnNavigate(path);
 
   const Page = routeFor(path);
-  return (
-    <>
-      {path !== "/admin" && <SiteTheme />}
-      <Page />
-    </>
-  );
+  return <Page />;
 }
 
 createRoot(document.getElementById("root")).render(

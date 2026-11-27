@@ -49,9 +49,24 @@
   --color-accent-2-800: #3a4671;
   --color-accent-2-900: #2a3352;
 
-  /* Cormorant Garamond over Lora, as before — the weights are what changed. */
-  --font-heading: "Cormorant Garamond", Georgia, serif;
-  --font-heading-weight: 600;
+  /*  The hand that writes the envelopes.
+   *
+   *  The Canva artwork these pages are drawn from is set in Lulu, which is
+   *  Canva's own font and not on the web. It is first in the stack all the
+   *  same: drop a lulu.woff2 into public/assets and add the @font-face below,
+   *  and every heading on the site picks it up with no other change.
+   *
+   *      @font-face { font-family: "Lulu";
+   *                   src: url("/assets/lulu.woff2") format("woff2");
+   *                   font-display: swap; }
+   *
+   *  Until then Patrick Hand stands in — the nearest rounded hand on Google
+   *  Fonts. Lora stays for running text, form fields and the policy pages,
+   *  where a hand at 13px is harder to read than it is worth.
+   */
+  --font-hand: "Lulu", "Patrick Hand", "Segoe Print", "Bradley Hand", cursive;
+  --font-heading: var(--font-hand);
+  --font-heading-weight: 400;
   --font-body: "Lora", Georgia, serif;
 
   --radius-sm: 3px;
@@ -142,7 +157,7 @@ a:hover {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Palettes chosen in the admin panel (see theme.js)
+   The palette
    ══════════════════════════════════════════════════════════════════════ */
 
 /* Headings and the small capitals above them. Sage keeps the original. */
@@ -150,15 +165,12 @@ a:hover {
   --color-heading: var(--color-accent-800);
   --color-heading-soft: var(--color-accent-700);
 }
-:root[data-headings] {
-  --color-heading: var(--heading-color);
-  --color-heading-soft: var(--heading-soft);
-}
 
-/* The buttons' palette: one base colour, mixed towards paper for the light
- * shades and towards ink for the dark ones, so every palette has the same
- * nine steps the components already use. */
-:root[data-buttons] {
+/* The buttons' colour: one base, mixed towards paper for the light shades
+ * and towards ink for the dark ones, so the nine steps the components use
+ * all come from the one value above. */
+:root {
+  --btn-base: #4e5e27;
   --color-accent: var(--btn-base);
   --color-accent-100: color-mix(in oklab, var(--btn-base) 10%, #fffdf7);
   --color-accent-200: color-mix(in oklab, var(--btn-base) 22%, #fffdf7);
@@ -222,25 +234,18 @@ a:hover {
    The form's highlights and the envelope's numbers
    ══════════════════════════════════════════════════════════════════════ */
 
-/* Both follow the buttons' colour until one is chosen for them in the panel
- * (theme.js sets data-form / data-numbers and the base colour). */
+/* The form's highlights — selected plans, borders, the radio dots — and the
+ * numbered circles. Fixed here at the values the panel's Design tab last
+ * published, now that the tab itself is gone. */
 :root {
-  --form-100: var(--color-accent-100);
-  --form-200: var(--color-accent-200);
-  --form-500: var(--color-accent-500);
-  --form-600: var(--color-accent-600);
-  --form-800: var(--color-accent-800);
-  --num-bg: var(--color-accent-200);
-  --num-ink: var(--color-accent-800);
-}
-:root[data-form] {
+  --form-base: #debb95;
   --form-100: color-mix(in oklab, var(--form-base) 10%, #fffdf7);
   --form-200: color-mix(in oklab, var(--form-base) 22%, #fffdf7);
   --form-500: color-mix(in oklab, var(--form-base) 84%, #fffdf7);
   --form-600: var(--form-base);
   --form-800: color-mix(in oklab, var(--form-base) 62%, #14110d);
-}
-:root[data-numbers] {
+
+  --num-base: #e7c642;
   --num-bg: color-mix(in oklab, var(--num-base) 22%, #fffdf7);
   --num-ink: color-mix(in oklab, var(--num-base) 62%, #14110d);
 }

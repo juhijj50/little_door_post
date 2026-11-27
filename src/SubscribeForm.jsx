@@ -16,9 +16,10 @@
  *  free, and offered two ways — the Back button, and the numbered steps along
  *  the top, where any part already completed is a link to it.
  *
- *  India only. Global shipping is being worked out, and until it is, the
- *  backend refuses an international sign-up outright — so the form does not
- *  ask a question it cannot honour. It says so in part three instead.
+ *  Posted to India and almost everywhere else. The one exception is the EU,
+ *  whose consumer and customs rules are more than this workshop can run a
+ *  second policy for — the country list simply does not offer those, and the
+ *  server refuses them too.
  *
  *  Payments are switched on by the backend, not here: each sign-up comes back
  *  with a payment block whose `enabled` flag decides between a pay button and a
@@ -581,7 +582,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
 
   /* The countries the post actually goes to, from the API — the same list the
    * server enforces, so the dropdown cannot offer somewhere an order would be
-   * refused for. Europe is absent on purpose; see business.international. */
+   * refused for. The EU is absent on purpose; see business.international. */
   const countries = config?.countries || [];
 
   /* Prices come from the plans table and nowhere else — there is no copy in
@@ -1052,7 +1053,7 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
         >
           {[
             ["India", "India", "Posted anywhere in India"],
-            ["", "Somewhere else", "Posted worldwide, outside Europe"],
+            ["", "Somewhere else", "Posted worldwide, outside the EU"],
           ].map(([value, label, blurb]) => {
             const on = value ? values.country === "India" : abroad;
             return (
@@ -1099,12 +1100,12 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
               </select>
             </Field>
             <p style={{ ...muted, margin: 0 }}>
-              <strong>We cannot post anywhere in Europe</strong> &mdash;{" "}
+              <strong>We do not post to European Union countries</strong> &mdash;{" "}
               {business.international.excluded.reason}.{" "}
               <a href="/shipping" target="_blank" rel="noreferrer noopener">
                 The full reason is here
               </a>
-              . Everywhere else on the list is open.
+              . Everywhere else, the United Kingdom included, is open.
             </p>
           </div>
         )}

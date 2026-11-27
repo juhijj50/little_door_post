@@ -185,9 +185,18 @@ export default function Privacy() {
       <p>
         We do not sell or post to{" "}
         <strong>{business.international.excluded.short}</strong>, and we do not direct this site or
-        any offer at people living there — so we are not set up to process orders under the GDPR or
-        the UK GDPR, and the order form does not offer those destinations. The reasons are on the{" "}
+        any offer at people living there — so we are not set up to process orders under the EU
+        GDPR, and the order form does not offer its member states. The reasons are on the{" "}
         <a href="/shipping">Shipping &amp; Delivery</a> page.
+      </p>
+      <p>
+        We <em>do</em> post to the United Kingdom. If you order from there, the UK GDPR gives you
+        rights over your details — to see them, correct them, have them deleted, object to how they
+        are used, and complain to the Information Commissioner&rsquo;s Office. Everything on this
+        page already applies to you, and the rights listed above are the ones we honour on request,
+        wherever you live. Write to{" "}
+        <a href={`mailto:${business.grievanceOfficer.email}`}>{business.grievanceOfficer.email}</a>{" "}
+        and we answer within {business.ackHours} hours.
       </p>
       <p>
         Wherever you are, the rights set out above are available to you on request, and if your own

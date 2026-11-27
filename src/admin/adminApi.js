@@ -104,17 +104,6 @@ export const changePassword = (current_password, new_password) =>
 
 export const getOverview = () => call("/admin/overview");
 
-export const setEdition = (cycle, status) =>
-  call("/admin/edition", { method: "PUT", json: { cycle, status } });
-
-export const undoCount = (cycle) => call(`/admin/editions/${cycle}/undo`, { method: "POST" });
-
-export const saveContents = (cycle, items, envelope_media_id, giveaway_code) =>
-  call(`/admin/editions/${cycle}`, {
-    method: "PUT",
-    json: { items, envelope_media_id, giveaway_code: giveaway_code || null },
-  });
-
 export const listSubscriptions = (params = {}) => {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")
@@ -128,22 +117,10 @@ export const setSubscriptionStatus = (id, status, note) =>
 export const setPlan = (region, months, amount_minor, active) =>
   call(`/admin/plans/${region}/${months}`, { method: "PUT", json: { amount_minor, active } });
 
-/* The hero picture, or a section background: slot is hero | meet | subscribe.
- * A null id puts the site's built-in one back; leave it undefined to change
- * only the text colour ("light" or "dark"). Only what is passed is sent. */
-export const setSiteImage = (slot, media_id, text_tone, frame) =>
-  call(`/admin/site-images/${slot}`, {
-    method: "PUT",
-    json: {
-      ...(media_id !== undefined ? { media_id } : {}),
-      ...(text_tone !== undefined ? { text_tone } : {}),
-      /* { pos_x, pos_y, zoom }: where the picture sits in its frame. */
-      ...(frame || {}),
-    },
-  });
-
-/* The colour palettes of the buttons and the headings, by name. */
-export const setTheme = (theme) => call("/admin/theme", { method: "PUT", json: theme });
+/* The one photograph on the landing page, under "What's Inside ?". A null id
+ * takes it off and leaves the placeholder. */
+export const setInsideImage = (media_id) =>
+  call("/admin/inside-image", { method: "PUT", json: { media_id } });
 
 /* The site's own files: where the last publish got to, and "send it now".
  * Saves schedule a publish on the server by themselves. */
@@ -158,10 +135,10 @@ export const deleteMedia = (id) => call(`/admin/media/${id}`, { method: "DELETE"
  * than about 1600. Redrawn on a canvas at that size it is a few hundred
  * kilobytes — and the redraw also drops the photo's metadata, including the
  * GPS position a phone writes into every picture it takes. */
-const MAX_SIDE = 1800;
-/* The hero and the section backgrounds fill the whole width of a large
- * screen, so they are kept larger. */
-const MAX_SIDE_WIDE = 2400;
+/* The "what's inside" photograph is shown at the full width of the section —
+ * about 1040px at its widest, so 2000 covers a high-density screen with room
+ * to spare. */
+const MAX_SIDE = 2000;
 
 export async function shrinkImage(file, maxSide = MAX_SIDE) {
   const url = URL.createObjectURL(file);
@@ -191,8 +168,8 @@ export async function shrinkImage(file, maxSide = MAX_SIDE) {
   }
 }
 
-export const uploadImage = async (file, { kind = "gallery", caption = "" } = {}) => {
-  const blob = await shrinkImage(file, kind === "site" ? MAX_SIDE_WIDE : MAX_SIDE);
+export const uploadImage = async (file, { kind = "inside", caption = "" } = {}) => {
+  const blob = await shrinkImage(file, MAX_SIDE);
   const query = new URLSearchParams({ kind, ...(caption ? { caption } : {}) });
   return call(`/admin/media?${query}`, {
     method: "POST",
@@ -204,7 +181,7 @@ export const uploadImage = async (file, { kind = "gallery", caption = "" } = {})
 /* ── the export ──────────────────────────────────────────────────────────── */
 
 export const downloadExport = async (cycle) => {
-  const res = await call(`/admin/editions/${cycle}/export`, { as: "blob" });
+  const res = await call(`/admin/months/${cycle}/export`, { as: "blob" });
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

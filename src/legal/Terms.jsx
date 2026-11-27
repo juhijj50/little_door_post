@@ -224,11 +224,12 @@ export default function Terms() {
       <h3>Countries we do not sell to</h3>
       <p>
         <strong>We do not sell or post to {intl.excluded.short}</strong>, and the order form does
-        not offer those destinations. The tax and consumer-protection rules across Europe &mdash; a
-        fourteen-day right to a full refund that follows the buyer, and duty on low-value imports
-        &mdash; are more than a two-person workshop in India is set up to operate; rather than
-        offer terms we could not honour properly, we would rather not take the order at all.
+        not offer its twenty-seven member states. The tax and consumer-protection rules there
+        &mdash; a fourteen-day right to a full refund that follows the buyer, and duty on low-value
+        imports &mdash; are more than a two-person workshop in India is set up to operate; rather
+        than offer terms we could not honour properly, we would rather not take the order at all.
       </p>
+      <p>{intl.excluded.elsewhere}</p>
       <p>
         If you live there, please do not attempt to order through a forwarding address or a
         re-shipper. We would not be able to support the order, and the protections your own law

@@ -1,13 +1,26 @@
 /*  The footer, shared by the landing page and all seven policy pages.
  *
- *  Every policy is linked from here, which is why it is shared rather than
- *  written twice: a payment aggregator's review looks for the policies to be
- *  reachable from the footer of *every* page, and a footer that exists in two
- *  copies is a footer that will eventually only be updated in one.
+ *  Three bands, each of them horizontal, so the footer stays short on a phone
+ *  instead of becoming a column of stacked lists:
+ *
+ *    top       the mark and a line about the club, with "The club" and
+ *              "Reach us" beside it — and beside each other, two-up, even on
+ *              the narrowest screen
+ *    policies  all seven, as one wrapping row rather than a tall list
+ *    base      the copyright line
+ *
+ *  It is shared rather than written twice because a payment aggregator's
+ *  review looks for the policies to be reachable from the footer of *every*
+ *  page, and a footer that exists in two copies is a footer that will
+ *  eventually only be updated in one.
+ *
+ *  Every one of the seven policies is in that middle row. Do not thin the list
+ *  out to tidy the layout: the list is the point.
+ *
+ *  Layout is `.foot*` in site.css.
  */
 import React from "react";
-import { css } from "./css.js";
-import { business } from "./business.js";
+import { business, addressLine } from "./business.js";
 
 export const POLICIES = [
   { href: "/terms", label: "Terms & Conditions" },
@@ -19,74 +32,74 @@ export const POLICIES = [
   { href: "/grievance", label: "Grievance Redressal" },
 ];
 
-const linkStyle = css(
-  "font-size:13px;text-decoration:none;color:color-mix(in srgb, var(--color-text) 66%, transparent);white-space:nowrap"
-);
-
-const muted = "font-size:12px;line-height:1.7;color:color-mix(in srgb, var(--color-text) 52%, transparent)";
+/* "/#inside", not "#inside": from a policy page these have to navigate home
+ * first. See the note in SiteNav.jsx. */
+const CLUB = [
+  { href: "/#inside", label: "What’s inside" },
+  { href: "/#subscribe", label: "Receive a letter" },
+  { href: "/#top", label: "Back to the top" },
+];
 
 export default function SiteFooter() {
-  const { address } = business;
+  const { instagram } = business;
 
   return (
-    <footer
-      style={css(
-        "position:relative;background:var(--color-bg);border-top:1px solid var(--color-divider);padding:clamp(34px,6vh,58px) clamp(20px,5vw,40px) clamp(28px,5vh,44px)"
-      )}
-    >
-      <div style={css("width:min(1080px,100%);margin:0 auto")}>
-        <div
-          style={css(
-            "display:flex;flex-wrap:wrap;gap:16px 32px;align-items:baseline;justify-content:space-between"
-          )}
-        >
-          <a
-            href="/"
-            style={css(
-              "font-family:var(--font-heading);font-size:clamp(17px,3vw,21px);text-decoration:none;color:var(--color-text)"
-            )}
-          >
-            The Little Door Post
-          </a>
-          {/* Kept in step with business.international.live: the footer must not
-            * promise post abroad while the order form refuses it. */}
-          <div
-            style={css(
-              "font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:color-mix(in srgb, var(--color-text) 52%, transparent)"
-            )}
-          >
-            One envelope a month · Posted across India{business.international.live ? " and abroad" : ""}
+    <footer className="foot">
+      <div className="foot__inner">
+        <div className="foot__top">
+          <div className="foot__brand">
+            <a href="/" className="foot__mark">
+              <img src="/assets/logo-round.webp" alt="" />
+              <span>The Little Door Post</span>
+            </a>
+            {/* Kept in step with business.international.live: the footer must
+              * not promise post abroad while the order form refuses it. */}
+            <p className="foot__blurb">
+              One envelope a month, printed on real paper and posted across India
+              {business.international.live ? " and almost everywhere else" : ""}.
+            </p>
+          </div>
+
+          <div className="foot__cols">
+            <div className="foot__col">
+              <h2 className="foot__heading">The club</h2>
+              <nav className="foot__links" aria-label="The club">
+                {CLUB.map((l) => (
+                  <a key={l.href} href={l.href}>
+                    {l.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
+
+            <div className="foot__col">
+              <h2 className="foot__heading">Reach us</h2>
+              <div className="foot__links">
+                <a href={`https://instagram.com/${instagram}`} target="_blank" rel="noreferrer noopener">
+                  @{instagram}
+                </a>
+                <a href={`mailto:${business.email}`}>{business.email}</a>
+                <a href={`tel:${business.phone.replace(/\s+/g, "")}`}>{business.phone}</a>
+              </div>
+              <p className="foot__hours">{business.hours}</p>
+            </div>
           </div>
         </div>
 
-        <nav
-          aria-label="Policies"
-          style={css(
-            "display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:clamp(22px,3.5vh,32px);padding-top:clamp(20px,3vh,26px);border-top:1px solid var(--color-divider)"
-          )}
-        >
+        <nav className="foot__policies" aria-label="Policies">
+          <span className="foot__heading">Policies</span>
           {POLICIES.map((p) => (
-            <a key={p.href} href={p.href} style={linkStyle}>
+            <a key={p.href} href={p.href}>
               {p.label}
             </a>
           ))}
         </nav>
 
-        <div
-          style={css(
-            "display:flex;flex-wrap:wrap;gap:6px 28px;margin-top:clamp(18px,3vh,26px);" + muted
-          )}
-        >
+        <div className="foot__base">
+          <address className="foot__address">{addressLine()}</address>
           <span>
-            {address.lines.join(", ")}, {address.state} {address.pincode}, {address.country}
+            © {new Date().getFullYear()} {business.tradingName} · {business.owner}
           </span>
-          <a href={`mailto:${business.email}`} style={css(muted + ";text-decoration:none")}>
-            {business.email}
-          </a>
-        </div>
-
-        <div style={css(muted + ";margin-top:10px")}>
-          © {new Date().getFullYear()} The Little Door Post. Illustrations and writing are our own.
         </div>
       </div>
     </footer>

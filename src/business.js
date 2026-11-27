@@ -116,35 +116,24 @@ export const business = {
   cancelBy: "1st",
   dispatchWindow: "from the 1st of the edition's month",
   deliveryEstimate: "up to a week from dispatch",
-  shipsTo: "India only",
+  shipsTo: "India and worldwide, apart from the European Union",
 
   /* ── posting abroad ──────────────────────────────────────────────────── */
-  /*  Not open yet. The backend refuses an international sign-up outright
-   *  (see create_subscription in app/routers/subscriptions.py) and the
-   *  `international` plans are `active = false` in the database, so nothing
-   *  can be sold abroad today whatever this file says.
+  /*  Open, and open nearly everywhere. The one closed door is the European
+   *  Union; see `excluded` below for why, and app/countries.py for the list
+   *  that the order form and the server both work from.
    *
-   *  The terms below are written and published now anyway, because they are
-   *  true statements about international orders either way — a customs charge
-   *  is the recipient's whether or not we are taking those orders this month.
-   *  The pages print them under a banner driven by `live`, so the site never
-   *  claims to ship somewhere it does not.
-   *
-   *  TO OPEN INTERNATIONAL SHIPPING, all four, in this order:
-   *    1. set prices and `active = true` on the international plans —
-   *       AND SEE "the risk margin" BELOW BEFORE YOU PICK THE NUMBER
-   *    2. drop the region check in create_subscription, and make the order
-   *       form offer a country list that OMITS everything in `excluded` below
-   *    3. re-read `excluded` — is that still the decision?
-   *    4. set `live: true` here
-   *
-   *  Do not do (4) before (1)-(3): it would put a shipping promise on the
-   *  site that the order form refuses to honour.
+   *  Whatever this file says, two things decide what can actually be sold
+   *  abroad: the `international` rows in the `plans` table (price and
+   *  `active`), and countries.INTERNATIONAL on the server. Change those first
+   *  and this second — never the other way round, or the site would promise a
+   *  destination the order form refuses.
    */
   international: {
     /* Open since 29 Sep 2026: $13 for one letter (from Oct 2026), postage
-     * included, to the countries in app/countries.py — everywhere but Europe.
-     * One letter at a time abroad, no longer plans. Razorpay raises USD orders
+     * included, to the countries in app/countries.py — everywhere but the EU,
+     * the United Kingdom included since Nov 2026. One letter at a time abroad,
+     * no longer plans. Razorpay raises USD orders
      * on this account, so the charge is in dollars rather than a rupee figure a
      * foreign card has to guess at. */
     live: true,
@@ -156,12 +145,6 @@ export const business = {
 
     /* The price abroad is not here either — it is the `international` row in
      * the plans table, read live like every other price. */
-
-    /*  Roughly how long the export paperwork is expected to take, told to
-     *  people on the waiting list. Deliberately hedged on the page — it is a
-     *  process with a government in it, and a date promised here is a date
-     *  somebody holds us to. */
-    setupDays: 10,
 
     /*  ── the risk margin ────────────────────────────────────────────────
      *
@@ -191,37 +174,36 @@ export const business = {
 
     /*  Where we will not post, and why.
      *
-     *  EU and UK consumer law gives a distance buyer 14 days to withdraw from
-     *  a contract for no reason and be refunded in full — including the
-     *  envelope already delivered and its postage. The right follows the
-     *  buyer, not the seller, so it would bind us here in Gujarat the moment
-     *  we sold to someone in Dublin. Returning paper goods from Europe costs
-     *  more than the goods, so in practice it means refunding an envelope the
-     *  reader keeps.
+     *  The European Union, and only the European Union.
      *
-     *  The decision (Sep 2026) is to not sell there at all rather than run a
-     *  second refund policy for one region. Revisit it if Europe ever looks
-     *  worth the extra policy — it is a real market for paper goods.
+     *  Two rules stack up there, and either alone would be enough. EU consumer
+     *  law gives a distance buyer fourteen days to withdraw from a contract
+     *  for no reason and be refunded in full — including the envelope already
+     *  delivered and its postage. That right follows the buyer, not the
+     *  seller, so it binds us here in Gujarat the moment we sell to Dublin,
+     *  and returning paper goods from Europe costs more than the goods. On top
+     *  of that, the EU began charging duty on low-value imports in July 2026.
+     *
+     *  The decision (Sep 2026, narrowed from "Europe" to the EU in Nov 2026)
+     *  is to not sell there rather than run a second refund policy for one
+     *  region. Everywhere else in Europe is open, the United Kingdom included.
      *
      *  THIS HAS TO BE ENFORCED AT THE ORDER FORM, not merely stated here. A
      *  policy page saying "not the EU" while the country dropdown offers
-     *  Germany puts us in exactly the position this avoids. The country list
-     *  in step (2) above is the part that actually does the work. */
+     *  Germany puts us in exactly the position this avoids. EXCLUDED in
+     *  app/countries.py is the part that actually does the work, and the
+     *  dropdown the form shows is built from the list beside it. */
     excluded: {
-      regions: ["Europe"],
-      short: "Europe",
-      /* Two rules stack up there, and either alone would be enough: the
-       * fourteen-day right to withdraw and be refunded in full (which follows
-       * the buyer, so it binds us here), and the duty the EU began charging on
-       * low-value imports in July 2026.
-       *
-       * The line is drawn at the continent rather than at "the EU, the EEA and
-       * the UK" on purpose — those borders are not obvious to somebody picking
-       * from a dropdown, and a rule a reader can predict is worth more than a
-       * few extra countries. The full list is app/countries.py. */
+      regions: ["the European Union"],
+      short: "the European Union",
       reason:
         "the tax and consumer-protection rules there are more than a two-person " +
         "workshop in India can take on",
+      /* Said on the policy pages directly under the exclusion, because "not
+       * the EU" leaves a reader in Oslo or Manchester guessing. */
+      elsewhere:
+        "Everywhere else we post — the United Kingdom, Switzerland, Norway and " +
+        "the rest of the world included.",
     },
 
     /* Real examples, kept current, because "rules may change" is abstract and
@@ -247,7 +229,7 @@ export const business = {
   resolveDays: 30,
 
   /* ── housekeeping ────────────────────────────────────────────────────── */
-  lastUpdated: "4 October 2026",
+  lastUpdated: "28 November 2026",
   jurisdiction: "Gandhinagar, Gujarat",
   paymentProcessor: "Razorpay Software Private Limited",
 };

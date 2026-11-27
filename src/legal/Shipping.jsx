@@ -10,7 +10,7 @@ export default function Shipping() {
     <LegalPage
       path="/shipping"
       title="Shipping & Delivery"
-      summary="One envelope a month, posted across India, postage already paid. Here is exactly when it leaves us and when it should reach you."
+      summary="One envelope a month, posted across India and almost everywhere else, postage already paid. Here is exactly when it leaves us and when it should reach you."
     >
       <h2>Where we post</h2>
       <p>
@@ -21,6 +21,13 @@ export default function Shipping() {
         </strong>{" "}
         Every state and union territory, including addresses served only by India Post.
       </p>
+      {intl.live && (
+        <p>
+          Abroad, the order form offers every country we post to — the United Kingdom, the United
+          States, Canada, Australia, the Gulf, Switzerland, Norway and the rest. The one exception
+          is the European Union; see <a href="#not-posted">Where we do not post</a> below.
+        </p>
+      )}
       {!intl.live && (
         <p>
           We do not ship internationally <strong>yet</strong>. The order form will not accept an
@@ -187,8 +194,9 @@ export default function Shipping() {
         <p style={css("margin:0")}>
           {intl.live ? (
             <>
-              <strong>International orders are open.</strong> The countries we can post to are
-              listed on the order form. Everything in this section applies to them.
+              <strong>International orders are open</strong>, everywhere except the European Union.
+              The countries we can post to are listed on the order form. Everything in this section
+              applies to them.
             </>
           ) : (
             <>
@@ -201,21 +209,23 @@ export default function Shipping() {
         </p>
       </div>
 
-      <h3>Where we will not post</h3>
+      <h3 id="not-posted">Where we do not post</h3>
       <p>
-        Even once international orders open,{" "}
-        <strong>we will not be posting to {intl.excluded.short}.</strong> Those destinations are not
-        offered on the order form and an order for one will be declined and refunded in full.
+        <strong>We do not post to {intl.excluded.short}.</strong> Its twenty-seven member states are
+        not offered on the order form, and an order for one will be declined and refunded in full.
       </p>
+      <Note>
+        <strong>{intl.excluded.elsewhere}</strong> The United Kingdom came back onto the list in
+        November 2026 — only the European Union itself is closed.
+      </Note>
       <p>
-        This is a deliberate choice rather than an oversight, and two rules stack up. Consumer law
-        across the EU, the EEA and the UK gives a distance buyer fourteen days to withdraw and be
-        refunded in full — including an envelope already posted — and that right follows the buyer,
-        so it would bind us here. On top of that the EU began charging duty on low-value imports in
-        July 2026, which puts a customs bill on an envelope that used to arrive free.
-        {" "}The line is drawn at the whole continent rather than at those three because their
-        borders are not obvious to somebody choosing from a list, and a rule you can predict is
-        worth more than a few extra countries. If it changes, this page changes with it.
+        This is a deliberate choice rather than an oversight, and two rules stack up. EU consumer
+        law gives a distance buyer fourteen days to withdraw and be refunded in full — including an
+        envelope already posted — and that right follows the buyer, so it would bind us here in
+        Gujarat. On top of that the EU began charging duty on low-value imports in July 2026, which
+        puts a customs bill on an envelope that used to arrive free. Neither is something a
+        two-person workshop can run a second returns-and-tax regime for. If it changes, this page
+        changes with it.
       </p>
       <p>
         Please do not try to work around it with a forwarding address or a re-shipping service. We
