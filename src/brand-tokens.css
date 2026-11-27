@@ -238,14 +238,14 @@ a:hover {
  * numbered circles. Fixed here at the values the panel's Design tab last
  * published, now that the tab itself is gone. */
 :root {
-  --form-base: #debb95;
+  --form-base: #95b1de;
   --form-100: color-mix(in oklab, var(--form-base) 10%, #fffdf7);
   --form-200: color-mix(in oklab, var(--form-base) 22%, #fffdf7);
   --form-500: color-mix(in oklab, var(--form-base) 84%, #fffdf7);
   --form-600: var(--form-base);
   --form-800: color-mix(in oklab, var(--form-base) 62%, #14110d);
 
-  --num-base: #e7c642;
+  --num-base: #4287e7;
   --num-bg: color-mix(in oklab, var(--num-base) 22%, #fffdf7);
   --num-ink: color-mix(in oklab, var(--num-base) 62%, #14110d);
 }
