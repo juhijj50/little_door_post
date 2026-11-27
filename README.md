@@ -26,6 +26,7 @@ the API's origin — copy `.env.example` to `.env`.
 | `src/SubscribeForm.jsx` | the sign-up flow and Razorpay Checkout |
 | `src/SiteFooter.jsx` | the footer, and `POLICIES` — the one list of policy pages |
 | `src/business.js` | **every legal and contact fact the policy pages state** |
+| `src/countries.js` | the served countries, mirroring `backend/app/countries.py` |
 | `src/legal/` | the seven policy pages and the 404 |
 | `src/legal/LegalPage.jsx` | the shell they share, plus `Fact`, `Note` and `Rows` |
 | `src/content/` | what the admin panel publishes: `prices.js`, `inside.js` |
@@ -116,11 +117,18 @@ Kingdom is served (it came back onto the list in November 2026), as are
 Switzerland, Norway, Iceland and the rest of non-EU Europe.
 
 The rule lives in **`backend/app/countries.py`** — `EXCLUDED` is the EU 27,
-`INTERNATIONAL` is everything else, the order form's dropdown is built from it
-and the server enforces it. `business.international.excluded` describes the
-same decision for readers, and the policy pages print it from there.
+`INTERNATIONAL` is everything else, and the server enforces it. Two files
+follow it:
 
-**Change both together.** A policy page that says "not the EU" while the
+- **`src/countries.js`** mirrors `INTERNATIONAL`, and is what the order form's
+  dropdown falls back to. The API's list wins the moment `/api/config` answers;
+  this copy is only there because the free-tier API sleeps, and a reader who
+  picked "Somewhere else" during the cold start used to open the dropdown and
+  find it empty.
+- **`src/business.js`** (`international.excluded`) describes the decision for
+  readers, and the policy pages print it from there.
+
+**Change all three together.** A policy page that says "not the EU" while the
 dropdown offers Germany is exactly the inconsistency this arrangement exists to
 prevent — and stating it is not enforcing it; `countries.py` is the part that
 does the real work.

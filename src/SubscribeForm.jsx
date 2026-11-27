@@ -29,6 +29,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { css } from "./css.js";
 import { createOrder, createSubscription, loadRazorpayCheckout, verifyPayment } from "./api.js";
 import { business } from "./business.js";
+import { COUNTRIES } from "./countries.js";
 import useConfig, { useEdition, usePlans } from "./useConfig.js";
 
 const STATES = [
@@ -580,10 +581,13 @@ export default function SubscribeForm({ onSealed, onUnsealed }) {
   const region = values.country === "India" ? "india" : "international";
   const abroad = region === "international";
 
-  /* The countries the post actually goes to, from the API — the same list the
-   * server enforces, so the dropdown cannot offer somewhere an order would be
-   * refused for. The EU is absent on purpose; see business.international. */
-  const countries = config?.countries || [];
+  /* The countries the post actually goes to: the API's list, which is the one
+   * the server enforces, so the dropdown cannot offer somewhere an order would
+   * be refused for. Until it answers — the free-tier API can take most of a
+   * minute to wake — the copy shipped with the site stands in, because an
+   * empty dropdown tells a reader nothing except that the page is broken.
+   * The EU is absent from both; see business.international.excluded. */
+  const countries = config?.countries?.length ? config.countries : COUNTRIES;
 
   /* Prices come from the plans table and nowhere else — there is no copy in
    * the code to fall back on, so nobody is ever shown a figure the checkout
