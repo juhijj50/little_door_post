@@ -19,7 +19,7 @@
  */
 import React from "react";
 import { mediaUrl } from "./api.js";
-import useConfig from "./useConfig.js";
+import useConfig, { useEdition } from "./useConfig.js";
 import { business } from "./business.js";
 import { inside } from "./content/index.js";
 import SubscribeForm from "./SubscribeForm.jsx";
@@ -35,6 +35,7 @@ const DEFAULT_INSIDE = "/assets/whats-inside.webp";
 
 export default function TheLittleDoorPost() {
   const { config } = useConfig();
+  const edition = useEdition();
 
   /* Published pictures are paths on this site; the API's are on the API. */
   const chosen = inside.published ? inside.image : mediaUrl(config?.inside?.image);
@@ -85,9 +86,16 @@ export default function TheLittleDoorPost() {
         <div className="stamp-card subscribe__card">
           <div className="subscribe__intro">
             <h2 className="subscribe__title">Receive a letter</h2>
+            {/* Says which batch they are joining, and says so plainly when
+              * that batch has gone — marking an edition sold out in the panel
+              * has to change what the page says, not only what the form
+              * does. Until the API answers, the neutral line. */}
             <p className="subscribe__lede">
-              Choose how many months, tell us where to post it, and your address goes into the
-              next batch.
+              {!edition
+                ? "Choose how many months, tell us where to post it, and your address goes into the next batch."
+                : edition.open
+                ? `Choose how many months, tell us where to post it, and your address goes into the ${edition.name} batch.`
+                : `Every copy of the ${edition.name} edition has gone. ${edition.next.name} opens soon.`}
             </p>
           </div>
           <div className="subscribe__form">

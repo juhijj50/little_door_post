@@ -104,6 +104,15 @@ export const changePassword = (current_password, new_password) =>
 
 export const getOverview = () => call("/admin/overview");
 
+/* Which edition is on sale, and whether it has sold out. Moving to a LATER
+ * month also counts the old edition's envelopes against every reader — the
+ * reply says how many. */
+export const setEdition = (cycle, status) =>
+  call("/admin/edition", { method: "PUT", json: { cycle, status } });
+
+/* Takes that counting back, for a month opened by mistake. */
+export const undoCount = (cycle) => call(`/admin/editions/${cycle}/undo`, { method: "POST" });
+
 export const listSubscriptions = (params = {}) => {
   const query = new URLSearchParams(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== "")

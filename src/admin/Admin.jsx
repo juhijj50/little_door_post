@@ -3,14 +3,16 @@
  *  Signed in with a username and password kept (hashed) in the database —
  *  accounts are made with `python -m app.create_admin`, never from here.
  *
+ *    Edition        which month is on sale; open, sold out, or move on, and
+ *                   how many envelopes and how much money that month is
  *    What's inside  the one photograph on the landing page's middle section
  *    Prices         the rate card: what each length costs, and what is on sale
  *    Readers        look somebody up, cancel or reinstate; Excel per month
  *    Account        change the password, sign out
  *
- *  That is the whole panel. The edition, envelope-contents, gallery and design
- *  tabs were retired in Nov 2026 along with the parts of the site they fed:
- *  the landing page is now three fixed sections, and the only thing on it that
+ *  That is the whole panel. The envelope-contents, gallery and design tabs
+ *  were retired in Nov 2026 along with the parts of the site they fed: the
+ *  landing page is now three fixed sections, and the only thing on it that
  *  changes is the "what's inside" photograph.
  *
  *  Saving the photograph or a price also publishes: the server rewrites the
@@ -31,11 +33,13 @@ import {
   getSession,
   listSubscriptions,
   publishNow,
+  setEdition,
   setInsideImage,
   setPlan,
   setSubscriptionStatus,
   signIn,
   signOut,
+  undoCount,
   uploadImage,
   whenSignedOut,
 } from "./adminApi.js";
@@ -49,6 +53,8 @@ const monthName = (cycle) => {
   const [y, m] = String(cycle || "").split("-").map(Number);
   return y && m >= 1 && m <= 12 ? `${MONTHS[m - 1]} ${y}` : cycle || "";
 };
+
+const STATUS_LABEL = { open: "Open", sold_out: "Sold out" };
 
 /* One action at a time per section, with its outcome shown beside it. */
 function useAction() {
@@ -72,6 +78,8 @@ function useAction() {
 }
 
 const Msg = ({ msg }) => (msg ? <div className={`adm-msg adm-msg--${msg.tone}`} role="status">{msg.text}</div> : null);
+
+const Pill = ({ status }) => <span className={`adm-pill adm-pill--${status}`}>{STATUS_LABEL[status] || status}</span>;
 
 /* ── sign in ───────────────────────────────────────────────────────────── */
 
@@ -111,7 +119,173 @@ function Login({ onIn }) {
   );
 }
 
-/* ── what's inside ─────────────────────────────────────────────────────── */
+/* ── edition ───────────────────────────────────────────────────────────── */
+
+/*  Which month is on sale, and the figures for it.
+ *
+ *  Two things happen here and only one of them is reversible by itself.
+ *  Marking an edition sold out just changes what the site says. Opening a
+ *  LATER month also counts that month's envelopes against every reader — a
+ *  one-month reader finishes, a longer plan goes down by one — which is why
+ *  it asks first, and why Undo exists in the table below.
+ */
+function EditionTab({ data, reload }) {
+  const { edition, stats, editions } = data;
+  const { busy, msg, run } = useAction();
+  const [pickCycle, setPickCycle] = useState(edition.next.cycle);
+  const [pickStatus, setPickStatus] = useState("open");
+  const exporting = useAction();
+
+  const apply = async (cycle, status) => {
+    const forward = cycle > edition.cycle;
+    if (forward && !window.confirm(
+      `Put ${monthName(cycle)} on sale?\n\n` +
+      `This counts the ${edition.name} envelopes against every reader: one-month readers ` +
+      `finish, longer plans go down by one. The ${edition.name} posting list stays ` +
+      `available to download.\n\nDone it by mistake? "Undo" in the table below takes it back.`
+    )) return;
+    if (cycle < edition.cycle && !window.confirm(
+      `${monthName(cycle)} is earlier than ${edition.name}. Go back to it anyway?`
+    )) return;
+    const done = await run(() => setEdition(cycle, status), (r) => {
+      const counted = Object.values(r.counted || {}).reduce((a, b) => a + b, 0);
+      return `${monthName(cycle)} is now ${STATUS_LABEL[status].toLowerCase()}.` +
+        (forward ? ` ${counted} reader${counted === 1 ? "" : "s"} counted for ${edition.name}.` : "");
+    });
+    if (done) reload();
+  };
+
+  /* A mistaken "Open next month", taken back. */
+  const undo = async (e) => {
+    if (!window.confirm(
+      `Undo counting ${e.name}?\n\n` +
+      `${e.posted_to} reader${e.posted_to === 1 ? "" : "s"} get the ${e.name} envelope back, ` +
+      `and ${e.name} goes back on the site as it was (${STATUS_LABEL[e.status].toLowerCase()}), ` +
+      `replacing ${edition.name}.\n\nUse this only if you moved on by mistake.`
+    )) return;
+    const done = await run(() => undoCount(e.cycle), (r) =>
+      `${e.name} is back on the site. ${r.given_back} reader${r.given_back === 1 ? "" : "s"} given the envelope back.`);
+    if (done) reload();
+  };
+
+  return (
+    <>
+      <section className="adm-card">
+        <div className="adm-row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <p className="adm-help" style={{ margin: 0 }}>On the site right now</p>
+            <h2 style={{ margin: "4px 0 8px" }}>{edition.name} edition</h2>
+            <Pill status={edition.status} />
+          </div>
+          <button className="adm-btn" disabled={exporting.busy}
+            onClick={() => exporting.run(() => downloadExport(edition.cycle), "Downloaded.")}>
+            {exporting.busy ? "Preparing…" : `Download ${edition.name} (Excel)`}
+          </button>
+        </div>
+        <Msg msg={exporting.msg} />
+
+        <p className="adm-help" style={{ marginTop: 16 }}>
+          {edition.open
+            ? `Readers can subscribe now, and they get the ${edition.name} envelope first.`
+            : `The site says ${edition.name} is sold out and ${edition.next.name} opens soon. Nobody can subscribe.`}
+        </p>
+        <div className="adm-row">
+          {edition.open ? (
+            <button className="adm-btn adm-btn--danger" disabled={busy} onClick={() => apply(edition.cycle, "sold_out")}>
+              Mark {edition.name} sold out
+            </button>
+          ) : (
+            <>
+              <button className="adm-btn adm-btn--primary" disabled={busy} onClick={() => apply(edition.next.cycle, "open")}>
+                Open {edition.next.name} &rarr;
+              </button>
+              <button className="adm-btn" disabled={busy} onClick={() => apply(edition.cycle, "open")}>
+                Re-open {edition.name}
+              </button>
+            </>
+          )}
+        </div>
+        <div style={{ marginTop: 12 }}><Msg msg={msg} /></div>
+
+        <details style={{ marginTop: 18 }}>
+          <summary className="adm-help" style={{ cursor: "pointer", margin: 0 }}>Choose a different month</summary>
+          <div className="adm-row" style={{ marginTop: 12, alignItems: "flex-end" }}>
+            <div>
+              <label className="adm-label" htmlFor="adm-month">Edition</label>
+              <input id="adm-month" type="month" className="adm-input" value={pickCycle}
+                onChange={(e) => setPickCycle(e.target.value)} />
+            </div>
+            <div>
+              <label className="adm-label" htmlFor="adm-status">Status</label>
+              <select id="adm-status" className="adm-select" value={pickStatus} onChange={(e) => setPickStatus(e.target.value)}>
+                <option value="open">Open</option>
+                <option value="sold_out">Sold out</option>
+              </select>
+            </div>
+            <button className="adm-btn adm-btn--primary" disabled={busy || !/^\d{4}-\d{2}$/.test(pickCycle)}
+              onClick={() => apply(pickCycle, pickStatus)}>
+              Save
+            </button>
+          </div>
+        </details>
+      </section>
+
+      <section className="adm-grid">
+        <div className="adm-stat"><div className="adm-stat__n">{stats.signups_this_edition}</div><div className="adm-stat__label">Paid sign-ups for {edition.name}</div></div>
+        <div className="adm-stat"><div className="adm-stat__n">{stats.to_post_this_edition}</div><div className="adm-stat__label">Envelopes to post for {edition.name}</div></div>
+        <div className="adm-stat"><div className="adm-stat__n">{stats.active}</div><div className="adm-stat__label">Readers still owed envelopes</div></div>
+        <div className="adm-stat"><div className="adm-stat__n">{stats.unpaid_attempts}</div><div className="adm-stat__label">Sign-ups started, not yet paid</div></div>
+      </section>
+
+      <section className="adm-card">
+        <h3>Every edition</h3>
+        <p className="adm-help">
+          <strong>Taken</strong> is what cleared for that edition. Rupees and dollars are shown
+          side by side rather than added up.
+        </p>
+        <div className="adm-table-wrap">
+          <table className="adm-table">
+            <thead>
+              <tr><th>Edition</th><th>Status</th><th>Paid sign-ups</th><th>Envelopes</th><th>Taken</th><th /></tr>
+            </thead>
+            <tbody>
+              {editions.map((e) => (
+                <tr key={e.cycle}>
+                  <td><strong>{e.name}</strong>{e.is_current && <span className="adm-pill adm-pill--muted" style={{ marginLeft: 8 }}>on the site</span>}</td>
+                  <td>{e.is_current ? <Pill status={e.status} /> : <span className="adm-help" style={{ margin: 0 }}>{e.counted ? "Posted" : "—"}</span>}</td>
+                  <td>{e.signups}</td>
+                  {/* On sale: everyone it goes to, longer plans included.
+                    * Past: how many were sent. Not open yet: nothing until it is. */}
+                  <td>
+                    {e.is_current
+                      ? `${stats.to_post_this_edition} to post`
+                      : e.posted_to
+                      ? `${e.posted_to} posted`
+                      : "—"}
+                  </td>
+                  <td>{e.revenue.join(" + ") || "—"}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    {e.can_undo && (
+                      <button className="adm-btn adm-btn--small adm-btn--danger" disabled={busy} onClick={() => undo(e)}
+                        style={{ marginRight: 6 }} title={`Undo moving on from ${e.name}`}>
+                        Undo
+                      </button>
+                    )}
+                    <button className="adm-btn adm-btn--small" onClick={() => exporting.run(() => downloadExport(e.cycle), "Downloaded.")}>
+                      Excel
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ── what's inside ─────────────────────────────────────────────── */
 
 /*  One photograph: the picture under "What's Inside ?" on the landing page.
  *
@@ -503,6 +677,7 @@ function PublishBar({ data }) {
 /* ── the panel ─────────────────────────────────────────────────────────── */
 
 const TABS = [
+  ["edition", "Edition"],
   ["inside", "What's inside"],
   ["prices", "Prices"],
   ["readers", "Readers"],
@@ -512,7 +687,7 @@ const TABS = [
 function Dashboard({ onOut }) {
   const [tab, setTab] = useState(() => {
     const t = window.location.hash.slice(1);
-    return TABS.some(([k]) => k === t) ? t : "inside";
+    return TABS.some(([k]) => k === t) ? t : "edition";
   });
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -553,6 +728,7 @@ function Dashboard({ onOut }) {
         {data && <PublishBar data={data} />}
         {error && <div className="adm-msg adm-msg--error">{error} <button className="adm-btn adm-btn--small" onClick={reload}>Try again</button></div>}
         {!data && !error && <div className="adm-card"><p className="adm-help" style={{ margin: 0 }}>Loading… the server may take up to a minute to wake.</p></div>}
+        {data && tab === "edition" && <EditionTab {...props} />}
         {data && tab === "inside" && <InsideTab {...props} />}
         {data && tab === "prices" && <PricesTab {...props} />}
         {data && tab === "readers" && <ReadersTab {...props} />}
